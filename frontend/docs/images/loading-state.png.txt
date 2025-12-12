@@ -1,0 +1,259 @@
+================================================================================
+SCREENSHOT PLACEHOLDER: loading-state.png
+================================================================================
+
+FILE PURPOSE
+--------------------------------------------------------------------------------
+This is a placeholder file for the loading-state.png screenshot. When the actual
+screenshot is captured, it should replace this placeholder file with the PNG
+image. This file contains instructions for documentation maintainers on how to
+properly capture the loading state screenshot.
+
+================================================================================
+SCREENSHOT CAPTURE INSTRUCTIONS
+================================================================================
+
+OVERVIEW
+--------
+Capture a screenshot of the Weekend Planner application during plan generation.
+This shows the loading state immediately after the user clicks "Generate Plan".
+The loading state transitions quickly to results, so capture timing is critical.
+
+WHAT THIS SCREENSHOT DEMONSTRATES
+---------------------------------
+- The visual feedback users see while waiting for AI to generate their plan
+- Skeleton loading animations indicating processing
+- The loading message providing user reassurance
+- Application responsiveness during API calls
+
+================================================================================
+HOW TO TRIGGER LOADING STATE
+================================================================================
+
+STANDARD METHOD
+---------------
+1. Start the ADK backend server: Run `adk web` from the repository root
+2. Start the frontend: Run `cd frontend && npm run dev`
+3. Open the application at http://localhost:5173
+4. Fill out the form with valid data:
+   - Location: "San Francisco, CA" or "94102"
+   - Start Date: Select an upcoming Saturday
+   - End Date: Select the following Sunday
+   - Kids Ages: "5, 10" (optional)
+   - Preferences: "outdoor activities" (optional)
+5. Click the "Generate Plan" button
+6. IMMEDIATELY capture the screenshot while loading state is visible
+7. The loading state typically lasts 2-10 seconds depending on API response time
+
+ALTERNATIVE METHOD (EXTENDED CAPTURE WINDOW)
+--------------------------------------------
+To capture the loading state more easily, use browser developer tools to
+throttle the network:
+
+1. Open Chrome/Edge DevTools (F12 or Cmd+Option+I)
+2. Go to the "Network" tab
+3. Click the throttling dropdown (usually shows "No throttling")
+4. Select "Slow 3G" to significantly slow down API responses
+5. This gives you a much longer window to capture the loading state
+6. Perform the standard method steps 3-6 above
+7. Remember to disable throttling after capture
+
+================================================================================
+VISUAL ELEMENTS TO INCLUDE
+================================================================================
+
+REQUIRED ELEMENTS
+-----------------
+- Loading skeleton cards with pulse animation
+  * Multiple skeleton cards should be visible
+  * Cards should have a subtle animated "shimmer" or "pulse" effect
+  * Skeleton elements represent where plan content will appear
+
+- Loading message: "Creating your perfect weekend..."
+  * This message should be clearly visible
+  * Text should be centered or prominently placed
+
+- Form area visible (may appear disabled/dimmed)
+  * The input form should still be in view on the left side (desktop)
+  * Form fields may appear slightly dimmed or disabled during loading
+
+- Animated loading indicator
+  * Skeleton pulse animation should be captured mid-animation
+  * Visual indication that processing is in progress
+
+LAYOUT REFERENCE
+----------------
+- Desktop (≥768px): Two-column layout
+  * Left column (40%): Form area (may be dimmed)
+  * Right column (60%): Loading skeleton and message
+- Mobile (<768px): Single stacked column
+  * Form above loading area
+
+COLOR REFERENCE
+---------------
+- Background: #F4F1DE (warm cream)
+- Skeleton elements: Light gray with animated pulse
+- Text color: #3D405B (deep charcoal)
+- Loading message may use primary color: #E07A5F (soft coral)
+
+================================================================================
+ACCESSIBILITY ELEMENTS TO NOTE
+================================================================================
+
+The loading state should demonstrate proper accessibility implementation:
+
+- The loading container should have aria-busy="true" attribute
+  * This communicates loading state to screen readers
+  * Assistive technologies announce that content is loading
+
+- Proper loading announcement for screen readers
+  * The "Creating your perfect weekend..." text serves as announcement
+
+- No focus traps during loading
+  * Users should still be able to navigate the page
+
+Note: These accessibility features won't be visible in the screenshot, but
+ensure the application is properly implementing them when capturing.
+
+================================================================================
+ANIMATION CAPTURE TIPS
+================================================================================
+
+TIMING THE CAPTURE
+------------------
+- Capture at peak of pulse animation for best visual effect
+- The pulse animation typically cycles every 1-2 seconds
+- Watch for the moment when skeleton elements are at brightest/most visible
+
+MULTIPLE ATTEMPTS
+-----------------
+- Multiple screenshots may be needed to get the best frame
+- Take several screenshots in quick succession during loading
+- Review and select the one with most visible animation effect
+
+SCREEN RECORDING APPROACH
+-------------------------
+If timing is difficult:
+1. Use screen recording software (QuickTime, OBS, or browser extension)
+2. Record the entire loading sequence
+3. Export as video and extract the best frame as PNG
+4. This ensures you capture the perfect moment of the animation
+
+BROWSER BUILT-IN RECORDING
+--------------------------
+Chrome DevTools has a built-in recorder:
+1. Open DevTools → Performance tab
+2. Click "Start profiling and reload page"
+3. Perform the action and stop recording
+4. Screenshots are captured in the filmstrip view
+5. Right-click any frame to save as image
+
+================================================================================
+RECOMMENDED BROWSER SETTINGS
+================================================================================
+
+WINDOW CONFIGURATION
+--------------------
+- Browser: Chrome, Edge, or Firefox (latest version)
+- Window width: 1200px for desktop view
+- This ensures both form and loading area are visible in two-column layout
+- For mobile view variant: Set window width to 375px
+
+NETWORK SETTINGS
+----------------
+- Network throttling: "Slow 3G" for longer capture window
+- Alternatively: Use no throttling and capture quickly
+- Connection to ADK backend must be active
+
+BROWSER STATE
+-------------
+- Clear browser cache before capture
+- Clear localStorage and sessionStorage
+- Use incognito/private mode for consistent styling
+- Disable browser extensions that might affect appearance
+
+DISPLAY SETTINGS
+----------------
+- Recommended display scale: 100%
+- For retina/HiDPI displays: Capture at 2x resolution
+- Ensure no OS-level zoom is applied
+
+================================================================================
+FILE NAMING CONVENTION
+================================================================================
+
+OUTPUT FILE
+-----------
+- File name: loading-state.png
+- Format: PNG (preferred for UI screenshots)
+- Do not use JPEG (lossy compression affects text quality)
+
+RESOLUTION GUIDELINES
+---------------------
+- Standard display: 1200px width minimum
+- Retina/HiDPI: 2400px width (2x resolution)
+- Recommended: Capture at 2x and provide both standard and @2x versions
+
+FILE SIZE
+---------
+- Optimize PNG after capture using tools like ImageOptim or TinyPNG
+- Target file size: Under 500KB for web performance
+- Maintain image quality - don't over-compress
+
+================================================================================
+REFERENCE IN DOCUMENTATION
+================================================================================
+
+This screenshot will be used in the following documentation files:
+
+GETTING STARTED GUIDE
+---------------------
+Location: frontend/docs/getting-started.md
+Section: Step 7 - Wait while AI creates your plan
+Context: Shows what users see immediately after clicking Generate Plan
+
+USER GUIDE
+----------
+Location: frontend/docs/user-guide.md
+Section: Generating Your Plan
+Context: Explains the loading state and what to expect during processing
+
+USAGE EXAMPLE
+-------------
+In Markdown documentation:
+
+```markdown
+After clicking "Generate Plan", you'll see a loading indicator:
+
+![Loading State](./images/loading-state.png)
+
+The AI is analyzing your preferences and researching activities. This
+typically takes a few seconds.
+```
+
+================================================================================
+CHECKLIST BEFORE FINALIZING SCREENSHOT
+================================================================================
+
+□ Loading skeleton cards are visible with pulse animation
+□ "Creating your perfect weekend..." message is visible
+□ Form area is visible (left side on desktop)
+□ Animation captured at a visually appealing frame
+□ No browser UI elements (address bar, bookmarks) in screenshot
+□ Screenshot is properly cropped to show relevant content
+□ Image is saved as PNG format
+□ File is named exactly: loading-state.png
+□ Image resolution is appropriate (2x for retina recommended)
+□ File size is optimized for web use
+
+================================================================================
+NOTES FOR DOCUMENTATION MAINTAINERS
+================================================================================
+
+- This placeholder file should be REPLACED with the actual PNG image
+- Keep this .txt file as a reference in version control if needed
+- Update the screenshot when UI changes significantly
+- Ensure screenshot matches the current deployed version of the application
+- If the loading message or skeleton design changes, recapture the screenshot
+
+================================================================================
