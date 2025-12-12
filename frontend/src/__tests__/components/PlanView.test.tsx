@@ -409,4 +409,32 @@ Disclaimer: Results are based on AI research and should be verified for accuracy
     expect(screen.getByText(/Weather: Good conditions/i)).toBeInTheDocument();
     expect(screen.getByText(/Ages: 5, 8/i)).toBeInTheDocument();
   });
+
+  /**
+   * Additional Test: Handles minimal content with single bullet point
+   * 
+   * Verifies that the component falls back to unstructured text display
+   * when there's only one bullet point (not enough to trigger activity cards).
+   * The parser requires at least 2 activities to create structured cards.
+   */
+  it('falls back to unstructured display for single bullet content', () => {
+    // Render with minimal result that has only one bullet point
+    render(<PlanView result={mockMinimalResult} />);
+
+    // Verify the main heading is still present
+    const mainHeading = screen.getByRole('heading', { name: /your weekend plan/i });
+    expect(mainHeading).toBeInTheDocument();
+
+    // Verify the single bullet content is visible as text
+    expect(screen.getByText(/Single activity suggestion/i)).toBeInTheDocument();
+
+    // Verify that NO activity list is rendered (should fall back to unstructured)
+    // because there's only 1 bullet point (needs >= 2 for structured cards)
+    const activityList = screen.queryByRole('list', { name: /list of activities/i });
+    expect(activityList).not.toBeInTheDocument();
+
+    // Verify the Raw Output section is available (mockMinimalResult has rawResponse)
+    const rawOutputToggle = screen.getByRole('button', { name: /raw api response/i });
+    expect(rawOutputToggle).toBeInTheDocument();
+  });
 });
