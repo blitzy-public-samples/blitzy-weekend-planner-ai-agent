@@ -170,15 +170,18 @@ describe('InputForm', () => {
     // Render the InputForm component with mock callbacks
     render(<InputForm onSubmit={mockOnSubmit} onReset={mockOnReset} />);
 
-    // Fill in the location field
+    // Fill in the location field and wait for state update
     const locationInput = screen.getByLabelText(/location/i);
     await user.type(locationInput, 'San Francisco');
 
-    // Wait for state update and verify button remains disabled
+    // Wait for all state updates to complete
     await waitFor(() => {
-      const submitButton = screen.getByRole('button', { name: /generate plan/i });
-      expect(submitButton).toBeDisabled();
+      expect(locationInput).toHaveValue('San Francisco');
     });
+
+    // Verify button remains disabled when dates are missing
+    const submitButton = screen.getByRole('button', { name: /generate plan/i });
+    expect(submitButton).toBeDisabled();
   });
 
   // ============================================================================
@@ -215,6 +218,11 @@ describe('InputForm', () => {
     // Set end date to an earlier date (invalid)
     await user.type(endDateInput, '2024-03-15');
 
+    // Wait for all input state updates to complete
+    await waitFor(() => {
+      expect(endDateInput).toHaveValue('2024-03-15');
+    });
+
     // Trigger form submission to activate validation
     const submitButton = screen.getByRole('button', { name: /generate plan/i });
     await user.click(submitButton);
@@ -250,17 +258,25 @@ describe('InputForm', () => {
     // Render the InputForm component with mock callbacks
     render(<InputForm onSubmit={mockOnSubmit} onReset={mockOnReset} />);
 
-    // Fill in all required fields with valid data
-    await user.type(screen.getByLabelText(/location/i), 'San Francisco');
-    await user.type(screen.getByLabelText(/start date/i), '2024-03-15');
-    await user.type(screen.getByLabelText(/end date/i), '2024-03-17');
+    // Get references to form elements
+    const locationInput = screen.getByLabelText(/location/i);
+    const startDateInput = screen.getByLabelText(/start date/i);
+    const endDateInput = screen.getByLabelText(/end date/i);
 
-    // Wait for state update and verify button is now enabled
+    // Fill in all required fields with valid data
+    await user.type(locationInput, 'San Francisco');
+    await user.type(startDateInput, '2024-03-15');
+    await user.type(endDateInput, '2024-03-17');
+
+    // Wait for all input state updates to complete
     await waitFor(() => {
-      const submitButton = screen.getByRole('button', { name: /generate plan/i });
-      expect(submitButton).toBeEnabled();
-      expect(submitButton).toHaveAttribute('aria-disabled', 'false');
+      expect(endDateInput).toHaveValue('2024-03-17');
     });
+
+    // Verify button is now enabled
+    const submitButton = screen.getByRole('button', { name: /generate plan/i });
+    expect(submitButton).toBeEnabled();
+    expect(submitButton).toHaveAttribute('aria-disabled', 'false');
   });
 
   // ============================================================================
@@ -290,12 +306,24 @@ describe('InputForm', () => {
     // Render the InputForm component with mock callbacks
     render(<InputForm onSubmit={mockOnSubmit} onReset={mockOnReset} />);
 
+    // Get references to form elements
+    const locationInput = screen.getByLabelText(/location/i);
+    const startDateInput = screen.getByLabelText(/start date/i);
+    const endDateInput = screen.getByLabelText(/end date/i);
+    const kidsAgesInput = screen.getByLabelText(/kids ages/i);
+    const preferencesInput = screen.getByLabelText(/preferences/i);
+
     // Fill in all form fields including optional ones
-    await user.type(screen.getByLabelText(/location/i), 'San Francisco');
-    await user.type(screen.getByLabelText(/start date/i), '2024-03-15');
-    await user.type(screen.getByLabelText(/end date/i), '2024-03-17');
-    await user.type(screen.getByLabelText(/kids ages/i), '5, 8');
-    await user.type(screen.getByLabelText(/preferences/i), 'outdoor activities');
+    await user.type(locationInput, 'San Francisco');
+    await user.type(startDateInput, '2024-03-15');
+    await user.type(endDateInput, '2024-03-17');
+    await user.type(kidsAgesInput, '5, 8');
+    await user.type(preferencesInput, 'outdoor activities');
+
+    // Wait for all input state updates to complete
+    await waitFor(() => {
+      expect(preferencesInput).toHaveValue('outdoor activities');
+    });
 
     // Click the submit button to trigger form submission
     const submitButton = screen.getByRole('button', { name: /generate plan/i });
@@ -333,18 +361,24 @@ describe('InputForm', () => {
     // Render the InputForm component with mock callbacks
     render(<InputForm onSubmit={mockOnSubmit} onReset={mockOnReset} />);
 
-    // Fill in multiple form fields
+    // Get references to all form fields
     const locationInput = screen.getByLabelText(/location/i);
     const startDateInput = screen.getByLabelText(/start date/i);
     const endDateInput = screen.getByLabelText(/end date/i);
     const kidsAgesInput = screen.getByLabelText(/kids ages/i);
     const preferencesInput = screen.getByLabelText(/preferences/i);
 
+    // Fill in multiple form fields
     await user.type(locationInput, 'San Francisco');
     await user.type(startDateInput, '2024-03-15');
     await user.type(endDateInput, '2024-03-17');
     await user.type(kidsAgesInput, '5, 8');
     await user.type(preferencesInput, 'outdoor activities');
+
+    // Wait for all input state updates to complete
+    await waitFor(() => {
+      expect(preferencesInput).toHaveValue('outdoor activities');
+    });
 
     // Verify fields have values before reset
     expect(locationInput).toHaveValue('San Francisco');
@@ -390,11 +424,22 @@ describe('InputForm', () => {
     // Render the InputForm component with mock callbacks
     render(<InputForm onSubmit={mockOnSubmit} onReset={mockOnReset} />);
 
+    // Get references to form elements
+    const locationInput = screen.getByLabelText(/location/i);
+    const startDateInput = screen.getByLabelText(/start date/i);
+    const endDateInput = screen.getByLabelText(/end date/i);
+    const kidsAgesInput = screen.getByLabelText(/kids ages/i);
+
     // Fill in all required fields plus kids ages with spaces
-    await user.type(screen.getByLabelText(/location/i), 'San Francisco');
-    await user.type(screen.getByLabelText(/start date/i), '2024-03-15');
-    await user.type(screen.getByLabelText(/end date/i), '2024-03-17');
-    await user.type(screen.getByLabelText(/kids ages/i), '3, 7, 12');
+    await user.type(locationInput, 'San Francisco');
+    await user.type(startDateInput, '2024-03-15');
+    await user.type(endDateInput, '2024-03-17');
+    await user.type(kidsAgesInput, '3, 7, 12');
+
+    // Wait for all input state updates to complete
+    await waitFor(() => {
+      expect(kidsAgesInput).toHaveValue('3, 7, 12');
+    });
 
     // Submit the form
     const submitButton = screen.getByRole('button', { name: /generate plan/i });
