@@ -245,6 +245,30 @@ export const createSessionFailureHandler = () => {
 // ============================================================================
 
 /**
+ * Creates an MSW handler that returns a successful response after a specified delay.
+ * Use this handler to test loading states by giving enough time for assertions.
+ * 
+ * @param delayMs - Delay in milliseconds before responding (default: 500ms)
+ * @returns MSW http.post handler with delayed response
+ * 
+ * @example
+ * ```typescript
+ * server.use(createDelayedHandler(1000)); // 1 second delay
+ * ```
+ */
+export const createDelayedHandler = (delayMs: number = 500) => {
+  return http.post('http://localhost:8000/run', async () => {
+    await new Promise((resolve) => setTimeout(resolve, delayMs));
+    return HttpResponse.json(mockPlanResponse, {
+      status: 200,
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    });
+  });
+};
+
+/**
  * Creates an MSW handler that simulates a timeout by delaying response indefinitely.
  * 
  * Note: In practice, this handler will be aborted by the test's AbortController
