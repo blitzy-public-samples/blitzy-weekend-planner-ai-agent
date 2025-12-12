@@ -17,7 +17,7 @@ describe('InputForm', () => {
   });
 
   it('renders location, start date, end date fields', () => {
-    render(<InputForm onSubmit={mockOnSubmit} />);
+    render(<InputForm onSubmit={mockOnSubmit} onReset={mockOnReset} />);
 
     expect(screen.getByLabelText(/location/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/start date/i)).toBeInTheDocument();
@@ -25,14 +25,14 @@ describe('InputForm', () => {
   });
 
   it('renders optional kids ages and preferences fields', () => {
-    render(<InputForm onSubmit={mockOnSubmit} />);
+    render(<InputForm onSubmit={mockOnSubmit} onReset={mockOnReset} />);
 
     expect(screen.getByLabelText(/kids ages/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/preferences/i)).toBeInTheDocument();
   });
 
   it('Generate button disabled when location empty', () => {
-    render(<InputForm onSubmit={mockOnSubmit} />);
+    render(<InputForm onSubmit={mockOnSubmit} onReset={mockOnReset} />);
 
     const submitButton = screen.getByRole('button', { name: /generate plan/i });
     expect(submitButton).toBeDisabled();
@@ -40,7 +40,7 @@ describe('InputForm', () => {
 
   it('Generate button disabled when dates missing', async () => {
     const user = userEvent.setup();
-    render(<InputForm onSubmit={mockOnSubmit} />);
+    render(<InputForm onSubmit={mockOnSubmit} onReset={mockOnReset} />);
 
     const locationInput = screen.getByLabelText(/location/i);
     await user.type(locationInput, 'San Francisco');
@@ -51,7 +51,7 @@ describe('InputForm', () => {
 
   it('shows inline error when end date < start date', async () => {
     const user = userEvent.setup();
-    render(<InputForm onSubmit={mockOnSubmit} />);
+    render(<InputForm onSubmit={mockOnSubmit} onReset={mockOnReset} />);
 
     const locationInput = screen.getByLabelText(/location/i);
     const startDateInput = screen.getByLabelText(/start date/i);
@@ -70,7 +70,7 @@ describe('InputForm', () => {
 
   it('Generate button enabled when required fields valid', async () => {
     const user = userEvent.setup();
-    render(<InputForm onSubmit={mockOnSubmit} />);
+    render(<InputForm onSubmit={mockOnSubmit} onReset={mockOnReset} />);
 
     await user.type(screen.getByLabelText(/location/i), 'San Francisco');
     await user.type(screen.getByLabelText(/start date/i), '2024-03-15');
@@ -82,7 +82,7 @@ describe('InputForm', () => {
 
   it('calls onSubmit with correct GeneratePlanInput structure', async () => {
     const user = userEvent.setup();
-    render(<InputForm onSubmit={mockOnSubmit} />);
+    render(<InputForm onSubmit={mockOnSubmit} onReset={mockOnReset} />);
 
     await user.type(screen.getByLabelText(/location/i), 'San Francisco');
     await user.type(screen.getByLabelText(/start date/i), '2024-03-15');
@@ -121,7 +121,7 @@ describe('InputForm', () => {
 
   it('Kids ages accepts "3, 7, 12" format with spaces', async () => {
     const user = userEvent.setup();
-    render(<InputForm onSubmit={mockOnSubmit} />);
+    render(<InputForm onSubmit={mockOnSubmit} onReset={mockOnReset} />);
 
     await user.type(screen.getByLabelText(/location/i), 'San Francisco');
     await user.type(screen.getByLabelText(/start date/i), '2024-03-15');
