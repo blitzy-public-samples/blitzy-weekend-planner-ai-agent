@@ -1,109 +1,321 @@
 /**
- * MSW (Mock Service Worker) request handlers for testing.
- * Mocks the ADK backend API endpoints.
+ * MSW (Mock Service Worker) request handlers for ADK API endpoints.
+ * 
+ * This module provides mock handlers for testing the frontend without requiring
+ * the actual ADK backend server. It uses MSW 2.x syntax with http.post() and
+ * HttpResponse for defining request interceptors.
+ * 
+ * @module handlers
  */
 
 import { http, HttpResponse } from 'msw';
 import { setupServer } from 'msw/node';
-import type { ADKResponse } from '../types';
+
+// ============================================================================
+// Constants
+// ============================================================================
 
 /**
- * Mock ADK response for successful plan generation
+ * Application name used in ADK API requests.
+ * Matches the backend WeekendPlanner agent configuration.
  */
-const mockSuccessResponse: ADKResponse = [
+const APP_NAME = 'WeekendPlanner';
+
+// ============================================================================
+// Mock Data Structures
+// ============================================================================
+
+/**
+ * Mock ADK event structure that matches the backend response format.
+ * The ADK server returns an array of events, where model responses
+ * contain the content property with parts array.
+ */
+interface MockADKEvent {
+  id: string;
+  timestamp: string;
+  author: string;
+  content?: {
+    role: string;
+    parts: Array<{ text?: string }>;
+  };
+}
+
+/**
+ * Sample weekend plan text returned by the mock API.
+ * This content simulates the summarizer_agent's final output from the backend.
+ */
+const SAMPLE_PLAN_TEXT = `# Weekend Plan for Your Family
+
+## Weather Forecast
+Based on the forecast, the weather looks good for outdoor activities this weekend!
+
+## Recommended Activities
+
+### Saturday
+- **Morning**: Visit the local farmer's market for fresh produce and family fun
+- **Afternoon**: Nature hike at the nearby state park - great for kids of all ages
+- **Evening**: Family dinner at a kid-friendly restaurant
+
+### Sunday  
+- **Morning**: Brunch at a cozy local cafe
+- **Afternoon**: Explore the children's museum with interactive exhibits
+- **Evening**: Relaxing movie night at home
+
+## Special Events This Weekend
+- Community fair at the town center (Saturday 10am-4pm)
+- Outdoor concert in the park (Sunday 3pm)
+
+---
+*Disclaimer: These results are based on AI agent research and should be verified for accuracy and availability.*`;
+
+/**
+ * Mock ADK response array that simulates the backend's /run endpoint response.
+ * Contains a single model event with the plan text.
+ */
+const mockPlanResponse: MockADKEvent[] = [
   {
-    id: 'event-1',
+    id: 'evt-preprocess-001',
     timestamp: new Date().toISOString(),
-    author: 'model',
+    author: 'PreprocessInputAgent',
     content: {
       role: 'model',
-      parts: [
-        {
-          text: `Here's your weekend plan!
-
-## Saturday
-- Morning: Visit the local farmer's market
-- Afternoon: Hike at the nearby state park
-- Evening: Dinner at a family-friendly restaurant
-
-## Sunday
-- Morning: Brunch at a local cafe
-- Afternoon: Visit the children's museum
-- Evening: Movie night at home
-
-Have a wonderful weekend!`
-        }
-      ]
+      parts: [{ text: '{"zip_code": "94105", "kid_ages": "5,8"}' }]
+    }
+  },
+  {
+    id: 'evt-weather-002',
+    timestamp: new Date().toISOString(),
+    author: 'WeatherAgent',
+    content: {
+      role: 'model',
+      parts: [{ text: 'good' }]
+    }
+  },
+  {
+    id: 'evt-summary-003',
+    timestamp: new Date().toISOString(),
+    author: 'SummarizerAgent',
+    content: {
+      role: 'model',
+      parts: [{ text: SAMPLE_PLAN_TEXT }]
     }
   }
 ];
 
-/**
- * API base URL for handlers
- */
-const API_BASE_URL = 'http://localhost:8000';
+// ============================================================================
+// Success Handlers
+// ============================================================================
 
 /**
- * Request handlers for MSW
+ * Default request handlers for MSW that mock successful API responses.
+ * 
+ * Includes handlers for:
+ * - POST /run - Agent execution endpoint returning mock plan data
+ * - POST /apps/:app/users/:user/sessions/:session - Session creation endpoint
+ * 
+ * Uses wildcard patterns (* /endpoint) to match requests regardless of base URL,
+ * supporting both proxied (/api/run) and direct (http://localhost:8000/run) requests.
  */
 export const handlers = [
-  // Session creation handler
-  http.post(`${API_BASE_URL}/apps/:appName/users/:userId/sessions/:sessionId`, () => {
-    return HttpResponse.json({ status: 'created' }, { status: 200 });
+  /**
+   * Handler for POST /run - Agent execution endpoint.
+   * Returns a mock ADK response array with plan content.
+   */
+  http.post('*/run', () => {
+    return HttpResponse.json(mockPlanResponse, {
+      status: 200,
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    });
   }),
 
-  // Agent run handler
-  http.post(`${API_BASE_URL}/run`, async () => {
-    // Simulate some processing time
-    await new Promise((resolve) => setTimeout(resolve, 100));
-    return HttpResponse.json(mockSuccessResponse, { status: 200 });
+  /**
+   * Handler for POST /apps/:app/users/:user/sessions/:session - Session creation.
+   * Returns an empty object with 200 status indicating successful session creation.
+   */
+  http.post('*/apps/:app/users/:user/sessions/:session', () => {
+    return HttpResponse.json({}, {
+      status: 200,
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    });
   })
 ];
 
-/**
- * MSW server instance for use in tests
- */
-export const server = setupServer(...handlers);
+// ============================================================================
+// Error Handler Factories
+// ============================================================================
 
 /**
- * Mock success response for use in tests
+ * Creates an MSW handler that returns a 400 Bad Request response for the /run endpoint.
+ * 
+ * Use this handler with server.use() in specific tests to simulate client-side
+ * request validation errors from the backend.
+ * 
+ * @returns MSW http.post handler configured for 400 error response
+ * 
+ * @example
+ * ```typescript
+ * beforeEach(() => {
+ *   server.use(create400Handler());
+ * });
+ * 
+ * it('handles bad request error', async () => {
+ *   // Test error handling logic
+ * });
+ * ```
  */
-export { mockSuccessResponse };
-
-/**
- * Helper to add error handlers for specific test scenarios
- */
-export const mockErrorResponse = (status: number, body?: object | string) => {
-  return http.post(`${API_BASE_URL}/run`, () => {
-    if (typeof body === 'string') {
-      return new HttpResponse(body, { status });
-    }
-    return HttpResponse.json(body || { error: 'Server error' }, { status });
+export const create400Handler = () => {
+  return http.post('*/run', () => {
+    return HttpResponse.json(
+      { message: 'Invalid request' },
+      {
+        status: 400,
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      }
+    );
   });
 };
 
 /**
- * Handler for timeout simulation
+ * Creates an MSW handler that returns a 500 Internal Server Error response for the /run endpoint.
+ * 
+ * Use this handler with server.use() in specific tests to simulate server-side
+ * errors from the backend ADK server.
+ * 
+ * @returns MSW http.post handler configured for 500 error response
+ * 
+ * @example
+ * ```typescript
+ * beforeEach(() => {
+ *   server.use(create500Handler());
+ * });
+ * 
+ * it('handles server error', async () => {
+ *   // Test error handling logic
+ * });
+ * ```
  */
-export const mockTimeoutHandler = http.post(`${API_BASE_URL}/run`, async () => {
-  // Simulate a very long delay (longer than test timeout)
-  await new Promise((resolve) => setTimeout(resolve, 60000));
-  return HttpResponse.json(mockSuccessResponse);
-});
-
-/**
- * Handler for malformed JSON response
- */
-export const mockMalformedJsonHandler = http.post(`${API_BASE_URL}/run`, () => {
-  return new HttpResponse('not valid json {{{', {
-    status: 200,
-    headers: { 'Content-Type': 'application/json' }
+export const create500Handler = () => {
+  return http.post('*/run', () => {
+    return HttpResponse.json(
+      { message: 'Server error' },
+      {
+        status: 500,
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      }
+    );
   });
-});
+};
 
 /**
- * Handler for network error simulation
+ * Creates an MSW handler that returns a failure response for session creation.
+ * 
+ * Use this handler with server.use() in specific tests to simulate session
+ * creation failures from the backend.
+ * 
+ * @returns MSW http.post handler configured for session creation failure
+ * 
+ * @example
+ * ```typescript
+ * beforeEach(() => {
+ *   server.use(createSessionFailureHandler());
+ * });
+ * 
+ * it('handles session creation failure', async () => {
+ *   // Test error handling logic
+ * });
+ * ```
  */
-export const mockNetworkErrorHandler = http.post(`${API_BASE_URL}/run`, () => {
-  return HttpResponse.error();
-});
+export const createSessionFailureHandler = () => {
+  return http.post('*/apps/:app/users/:user/sessions/:session', () => {
+    return HttpResponse.json(
+      { message: 'Session creation failed' },
+      {
+        status: 500,
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      }
+    );
+  });
+};
+
+// ============================================================================
+// Additional Error Handlers for Comprehensive Testing
+// ============================================================================
+
+/**
+ * Creates an MSW handler that simulates a timeout by delaying response indefinitely.
+ * 
+ * Note: In practice, this handler will be aborted by the test's AbortController
+ * timeout before completing, allowing timeout handling logic to be tested.
+ * 
+ * @returns MSW http.post handler that delays response for 60 seconds
+ */
+export const createTimeoutHandler = () => {
+  return http.post('*/run', async () => {
+    // Delay longer than the expected 30-second timeout
+    await new Promise((resolve) => setTimeout(resolve, 60000));
+    return HttpResponse.json(mockPlanResponse);
+  });
+};
+
+/**
+ * Creates an MSW handler that returns malformed JSON to test parse error handling.
+ * 
+ * @returns MSW http.post handler that returns invalid JSON content
+ */
+export const createMalformedJsonHandler = () => {
+  return http.post('*/run', () => {
+    return new HttpResponse('not valid json {{{', {
+      status: 200,
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    });
+  });
+};
+
+/**
+ * Creates an MSW handler that simulates a network error.
+ * 
+ * @returns MSW http.post handler that triggers a network error
+ */
+export const createNetworkErrorHandler = () => {
+  return http.post('*/run', () => {
+    return HttpResponse.error();
+  });
+};
+
+// ============================================================================
+// Server Instance
+// ============================================================================
+
+/**
+ * MSW server instance configured with default success handlers.
+ * 
+ * Provides methods for test lifecycle management:
+ * - listen() - Start intercepting requests
+ * - resetHandlers() - Reset to default handlers after each test
+ * - close() - Stop intercepting requests
+ * 
+ * @example
+ * ```typescript
+ * // In test setup (beforeAll)
+ * server.listen();
+ * 
+ * // After each test (afterEach)
+ * server.resetHandlers();
+ * 
+ * // In test teardown (afterAll)
+ * server.close();
+ * ```
+ */
+export const server = setupServer(...handlers);
