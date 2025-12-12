@@ -60,6 +60,35 @@ pip install -r requirements.txt
 
 run this command "adk web"
 
+## Frontend Application
+
+#### Prerequisites
+- Node.js 20.x LTS
+
+#### Setup
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+#### Running Full Stack
+
+Run both the backend and frontend in separate terminals:
+
+**Terminal 1 (Backend):**
+```bash
+adk web
+```
+Backend runs at http://localhost:8000
+
+**Terminal 2 (Frontend):**
+```bash
+cd frontend && npm run dev
+```
+Frontend runs at http://localhost:5173
+
 ### Agent Architecture
 
 The system uses a multi-agent hierarchy:
