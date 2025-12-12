@@ -57,7 +57,7 @@ export interface RawOutputProps {
  * <RawOutput data={adkResponse} title="API Response" />
  * ```
  */
-function RawOutput({ data, title = 'Raw Output' }: RawOutputProps): JSX.Element {
+export function RawOutput({ data, title = 'Raw Output' }: RawOutputProps): JSX.Element {
   /**
    * State to track whether the raw output section is expanded.
    * Starts collapsed (false) by default for a cleaner initial UI.
