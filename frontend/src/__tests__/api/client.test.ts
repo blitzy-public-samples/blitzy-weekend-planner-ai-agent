@@ -41,6 +41,20 @@ describe('API Client', () => {
       preferences: 'outdoor activities'
     };
 
+    const minimalInput = {
+      location: 'San Francisco',
+      startDate: '2024-03-15',
+      endDate: '2024-03-17'
+    };
+
+    const inputWithEmptyOptionals = {
+      location: 'San Francisco',
+      startDate: '2024-03-15',
+      endDate: '2024-03-17',
+      kidsAges: '   ',
+      preferences: ''
+    };
+
     it('returns success with valid ADK response', async () => {
       const result = await generatePlan(validInput);
       
@@ -50,9 +64,60 @@ describe('API Client', () => {
       expect(result.rawResponse).toBeDefined();
     });
 
+    it('returns success without optional fields', async () => {
+      const result = await generatePlan(minimalInput);
+      
+      expect(result.success).toBe(true);
+      expect(result.planText).toBeDefined();
+    });
+
+    it('handles empty optional fields correctly', async () => {
+      const result = await generatePlan(inputWithEmptyOptionals);
+      
+      expect(result.success).toBe(true);
+      expect(result.planText).toBeDefined();
+    });
+
     it('handles 400 Bad Request with structured error', async () => {
       server.use(
         mockErrorResponse(400, { detail: 'Invalid request parameters' })
+      );
+
+      const result = await generatePlan(validInput);
+      
+      expect(result.success).toBe(false);
+      expect(result.error?.message).toContain('Invalid request');
+      expect(result.error?.statusCode).toBe(400);
+    });
+
+    it('handles 400 Bad Request with message field', async () => {
+      server.use(
+        mockErrorResponse(400, { message: 'Missing required field' })
+      );
+
+      const result = await generatePlan(validInput);
+      
+      expect(result.success).toBe(false);
+      expect(result.error?.message).toContain('Invalid request');
+      expect(result.error?.statusCode).toBe(400);
+    });
+
+    it('handles 400 Bad Request with error field', async () => {
+      server.use(
+        mockErrorResponse(400, { error: 'Bad input data' })
+      );
+
+      const result = await generatePlan(validInput);
+      
+      expect(result.success).toBe(false);
+      expect(result.error?.message).toContain('Invalid request');
+    });
+
+    it('handles 400 Bad Request with plain text body', async () => {
+      server.use(
+        http.post('http://localhost:8000/run', () => {
+          return new HttpResponse('Bad request plain text', { status: 400 });
+        })
       );
 
       const result = await generatePlan(validInput);
@@ -89,6 +154,67 @@ describe('API Client', () => {
       expect(result.success).toBe(false);
       // Should provide user-friendly error message
       expect(result.error?.message).toBeDefined();
+    });
+
+    it('extracts plan text from response with no content', async () => {
+      server.use(
+        http.post('http://localhost:8000/run', () => {
+          return HttpResponse.json([
+            {
+              id: 'event-1',
+              timestamp: new Date().toISOString(),
+              author: 'system',
+              content: undefined
+            }
+          ]);
+        })
+      );
+
+      const result = await generatePlan(validInput);
+      
+      expect(result.success).toBe(true);
+      expect(result.planText).toBeUndefined();
+    });
+
+    it('handles response with no text parts', async () => {
+      server.use(
+        http.post('http://localhost:8000/run', () => {
+          return HttpResponse.json([
+            {
+              id: 'event-1',
+              timestamp: new Date().toISOString(),
+              author: 'model',
+              content: {
+                role: 'model',
+                parts: [{ text: undefined }]
+              }
+            }
+          ]);
+        })
+      );
+
+      const result = await generatePlan(validInput);
+      
+      expect(result.success).toBe(true);
+    });
+
+    it('handles response with empty events array', async () => {
+      server.use(
+        http.post('http://localhost:8000/run', () => {
+          return HttpResponse.json([]);
+        })
+      );
+
+      const result = await generatePlan(validInput);
+      
+      expect(result.success).toBe(true);
+      expect(result.planText).toBeUndefined();
+    });
+
+    it('uses provided sessionId parameter', async () => {
+      const result = await generatePlan(validInput, 'custom_user', 'custom_session');
+      
+      expect(result.success).toBe(true);
     });
   });
 });

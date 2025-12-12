@@ -179,6 +179,34 @@ export interface PlanError {
 }
 
 /**
+ * API error structure used throughout the application.
+ * Contains structured error information for display to users
+ * and debugging purposes. Used by API client and error display components.
+ */
+export interface ApiError {
+  /**
+   * User-friendly error message describing what went wrong.
+   * This message is suitable for display in the UI.
+   * @example "Couldn't reach the backend. Make sure the ADK server is running."
+   */
+  message: string;
+
+  /**
+   * HTTP status code if available.
+   * Useful for determining the type of error (4xx client, 5xx server).
+   * @example 400, 500, 502
+   */
+  statusCode?: number;
+
+  /**
+   * Raw error body from the server response.
+   * Contains the full error details for technical debugging.
+   * Displayed in the expandable "Technical Details" section.
+   */
+  rawBody?: string;
+}
+
+/**
  * Result structure for plan generation API calls.
  * Represents either a successful plan generation or an error state.
  * Used as the return type for the generatePlan() API client function.
