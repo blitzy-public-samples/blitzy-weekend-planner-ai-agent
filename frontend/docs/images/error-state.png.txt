@@ -1,0 +1,267 @@
+================================================================================
+ERROR STATE SCREENSHOT PLACEHOLDER
+================================================================================
+File: error-state.png
+Location: frontend/docs/images/
+
+This file serves as a placeholder and capture guide for documentation
+maintainers who will create the actual error-state.png screenshot.
+
+================================================================================
+1. FILE PURPOSE
+================================================================================
+
+This screenshot documents the error state of the Weekend Planner application.
+It shows users what to expect when something goes wrong, helping them
+understand error messages and know what actions they can take.
+
+The error-state.png image should display the ErrorDisplay component in action,
+showcasing the user-friendly error message design and the expandable
+technical details section.
+
+================================================================================
+2. SCREENSHOT CAPTURE INSTRUCTIONS
+================================================================================
+
+Follow these steps to capture the error state screenshot:
+
+Step 1: Ensure the Frontend is Running
+   - Navigate to the frontend directory
+   - Run: npm run dev
+   - Confirm the application loads at http://localhost:5173
+
+Step 2: STOP the Backend Server
+   - If the ADK backend is running (via "adk web"), stop it
+   - This simulates a connection failure scenario
+   - Alternatively, disconnect from the network temporarily
+
+Step 3: Fill Out the Form
+   - Enter a valid location (e.g., "San Francisco" or "94102")
+   - Select a valid start date (e.g., upcoming Saturday)
+   - Select a valid end date (same or later date)
+   - Optionally add kids ages and preferences
+
+Step 4: Trigger the Error
+   - Click the "Generate Plan" button
+   - Wait for the request to fail (may take a few seconds)
+   - The error display component should appear in the output panel
+
+Step 5: Capture the Screenshot
+   - Ensure the complete error card is visible
+   - The "Technical Details" section can be collapsed OR expanded
+   - Capture using browser screenshot tools or system screenshot
+
+================================================================================
+3. EXPECTED ERROR MESSAGE
+================================================================================
+
+The primary error message should read:
+
+   "Couldn't reach the backend. Make sure the ADK server is running
+   with `adk web`"
+
+This is the user-friendly message that guides users toward the solution.
+
+Other possible error messages that could be captured:
+   - "Something went wrong on the server. Please try again."
+   - "Request timed out. Please try again."
+   - "Connection blocked. See README for proxy setup."
+
+Choose the backend connection error for the primary documentation screenshot
+as it represents the most common user issue.
+
+================================================================================
+4. VISUAL ELEMENTS TO INCLUDE
+================================================================================
+
+The screenshot MUST show the following elements:
+
+Error Card Container:
+   [ ] Red-bordered card indicating error state
+   [ ] Uses error color accents (#E63946 - muted red)
+   [ ] Rounded corners (rounded-xl / 12px border radius)
+   [ ] Clear visual distinction from success state
+
+Error Icon or Indicator:
+   [ ] Warning icon or error symbol
+   [ ] Positioned prominently near the message
+   [ ] Uses error color (#E63946)
+
+User-Friendly Error Message:
+   [ ] Main error text clearly visible and readable
+   [ ] Non-technical language explaining the issue
+   [ ] Suggested action (run "adk web" command)
+
+Technical Details Section:
+   [ ] "Technical Details" label/heading visible
+   [ ] Expandable/collapsible indicator (arrow or chevron)
+   [ ] Can show collapsed or expanded state
+   [ ] If expanded: shows status code, raw error body
+
+Retry Button (if applicable):
+   [ ] Button to retry the failed request
+   [ ] Clear call-to-action styling
+
+================================================================================
+5. TECHNICAL DETAILS - EXPANDED VIEW (OPTIONAL)
+================================================================================
+
+If you choose to capture the expanded technical details view, it should show:
+
+   - HTTP Status Code (if applicable, e.g., "Status: 0" for network failure)
+   - Error type or name
+   - Raw error message or body content
+   - Timestamp of when error occurred
+
+This gives technically-inclined users information for troubleshooting.
+
+================================================================================
+6. LAYOUT CONTEXT
+================================================================================
+
+Desktop View (Recommended for Primary Screenshot):
+   - Browser window width: 1200px
+   - Two-column layout visible:
+     * Left column (40%): Input form with filled data
+     * Right column (60%): Error display component
+   - Both columns should be visible in screenshot
+
+Mobile View (Optional Alternative):
+   - Browser window width: 768px or less
+   - Single-column stacked layout
+   - Form above, error display below
+
+Include enough context to show:
+   - The form data that was submitted
+   - The clear error response in the output area
+   - Application header if space permits
+
+================================================================================
+7. RECOMMENDED BROWSER SETTINGS
+================================================================================
+
+Before capturing, configure your browser as follows:
+
+Browser Choice:
+   - Chrome (preferred for consistent rendering)
+   - Firefox, Safari, or Edge also acceptable
+
+Window Configuration:
+   - Width: 1200px for desktop view
+   - Height: 800px minimum to avoid scrolling
+   - Zoom level: 100%
+
+Preparation Steps:
+   - Clear browser cache and cookies
+   - Use incognito/private browsing mode for clean state
+   - Disable browser extensions that may affect styling
+   - Set system to light mode (unless dark mode is documented)
+
+DevTools (if needed):
+   - Use Device Toolbar to set exact viewport size
+   - Toggle device emulation off for true desktop view
+   - Network tab can verify backend is unreachable
+
+================================================================================
+8. FILE NAMING AND FORMAT
+================================================================================
+
+File Name: error-state.png
+
+Format Requirements:
+   - File type: PNG (preferred for UI screenshots)
+   - Color depth: 24-bit or 32-bit with transparency
+   - Transparency: Include if background has rounded corners
+
+Resolution Guidelines:
+   - Standard resolution: 1200 x 800 pixels minimum
+   - Retina/HiDPI: 2400 x 1600 pixels (2x scale) recommended
+   - Ensure text remains crisp and readable when scaled
+
+Compression:
+   - Optimize file size while maintaining quality
+   - Target: Under 500KB for web performance
+   - Tools: ImageOptim, TinyPNG, or similar
+
+================================================================================
+9. REFERENCE IN DOCUMENTATION
+================================================================================
+
+This screenshot is referenced in the following documentation files:
+
+user-guide.md:
+   - Section: "Handling Errors"
+   - Context: Shows users what error state looks like
+   - Purpose: Help users recognize and respond to errors
+
+troubleshooting.md:
+   - Section: "Connection Problems"
+   - Context: Visual reference for backend connection issues
+   - Purpose: Guide users through resolving common errors
+
+docs/README.md:
+   - Section: "Screenshots" (if screenshot gallery included)
+   - Context: Overview of available documentation images
+
+================================================================================
+10. ALTERNATIVE ERROR SCENARIOS
+================================================================================
+
+While the primary screenshot shows backend connection failure, consider
+capturing additional error states for comprehensive documentation:
+
+Server Error (500):
+   - Message: "Something went wrong on the server. Please try again."
+   - How to trigger: Backend must return 500 status (requires backend modification)
+
+Request Timeout:
+   - Message: "Request timed out. Please try again."
+   - How to trigger: Slow network or backend takes >30 seconds to respond
+
+CORS Error:
+   - Message: "Connection blocked. See README for proxy setup."
+   - How to trigger: Misconfigured proxy or direct API access without CORS
+
+Invalid Request (400):
+   - Message: "Invalid request: [brief description]"
+   - How to trigger: Backend validation failure
+
+These can be captured as supplementary screenshots if documentation requires
+showing multiple error types.
+
+================================================================================
+11. QUALITY CHECKLIST
+================================================================================
+
+Before finalizing the screenshot, verify:
+
+[ ] Error message text is completely visible and readable
+[ ] No text is cut off or truncated
+[ ] Error card borders and styling are clearly visible
+[ ] Color contrast meets accessibility standards
+[ ] Technical Details section toggle is visible
+[ ] Form area shows that a submission was attempted
+[ ] No personal or sensitive information visible
+[ ] Browser chrome is cropped out (screenshot page only)
+[ ] File size is optimized for web use
+[ ] Image dimensions match documentation requirements
+
+================================================================================
+12. NOTES FOR MAINTAINERS
+================================================================================
+
+When updating this screenshot:
+
+- Regenerate if UI design changes significantly
+- Verify error messages match current implementation
+- Test that documented steps still reproduce the error state
+- Update this placeholder if capture instructions change
+- Coordinate with troubleshooting.md content updates
+
+For questions about error handling implementation, refer to:
+   - frontend/src/components/ErrorDisplay.tsx
+   - frontend/src/api/client.ts (error handling logic)
+
+================================================================================
+END OF PLACEHOLDER DOCUMENT
+================================================================================
