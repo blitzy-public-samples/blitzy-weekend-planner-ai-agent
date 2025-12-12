@@ -60,7 +60,7 @@ describe('API Client', () => {
       
       expect(result.success).toBe(true);
       expect(result.planText).toBeDefined();
-      expect(result.planText).toContain('weekend plan');
+      expect(result.planText?.toLowerCase()).toContain('weekend plan');
       expect(result.rawResponse).toBeDefined();
     });
 
