@@ -13,8 +13,6 @@
  * @module components/LoadingState
  */
 
-import React from 'react';
-
 /**
  * LoadingState component displays a skeleton loading animation
  * while the AI is generating a weekend plan.
@@ -36,7 +34,7 @@ import React from 'react';
  * {isLoading && <LoadingState />}
  * ```
  */
-function LoadingState(): JSX.Element {
+export function LoadingState(): JSX.Element {
   return (
     <div
       className="rounded-xl p-6"

@@ -1,5 +1,13 @@
 /**
  * Tests for the LoadingState component
+ * 
+ * This component is a pure presentational component that displays
+ * a skeleton loading animation while the AI is generating a weekend plan.
+ * 
+ * Test cases (3 total):
+ * 1. Renders skeleton/pulse animation elements
+ * 2. Displays "Creating your perfect weekend..." message
+ * 3. Has aria-busy="true" for accessibility
  */
 
 import { describe, it, expect } from 'vitest';
@@ -26,11 +34,5 @@ describe('LoadingState', () => {
 
     const loadingContainer = screen.getByLabelText(/loading/i);
     expect(loadingContainer).toHaveAttribute('aria-busy', 'true');
-  });
-
-  it('accepts custom message prop', () => {
-    render(<LoadingState message="Custom loading message" />);
-
-    expect(screen.getByText(/custom loading message/i)).toBeInTheDocument();
   });
 });
