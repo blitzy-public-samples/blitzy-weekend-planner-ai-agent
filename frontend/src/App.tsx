@@ -43,33 +43,6 @@ interface AppError {
 }
 
 /**
- * Builds a natural language prompt from user input.
- * Constructs a human-readable request string that the ADK agent can process.
- * 
- * @param input - The user's form input data
- * @returns Formatted prompt string for the AI agent
- * 
- * @example
- * const input = { location: "San Francisco", startDate: "2024-03-15", endDate: "2024-03-17" };
- * buildPrompt(input); // "Plan a weekend trip to San Francisco from 2024-03-15 to 2024-03-17."
- */
-function buildPrompt(input: GeneratePlanInput): string {
-  let prompt = `Plan a weekend trip to ${input.location} from ${input.startDate} to ${input.endDate}.`;
-
-  // Add kids ages if provided (used by ADK PreprocessInputAgent)
-  if (input.kidsAges && input.kidsAges.trim()) {
-    prompt += ` We have kids ages ${input.kidsAges}.`;
-  }
-
-  // Add preferences if provided (customizes activity recommendations)
-  if (input.preferences && input.preferences.trim()) {
-    prompt += ` Preferences: ${input.preferences}`;
-  }
-
-  return prompt;
-}
-
-/**
  * App Component - Main application root
  * 
  * Manages application state and coordinates the Weekend Planner workflow:
