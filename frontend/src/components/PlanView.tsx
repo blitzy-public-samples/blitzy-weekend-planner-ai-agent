@@ -21,7 +21,6 @@
  * @fileoverview Weekend plan display component with activity cards and raw output viewer
  */
 
-import React from 'react';
 import RawOutput from './RawOutput';
 import type { ADKResponse } from '../types';
 

@@ -62,7 +62,7 @@ describe('PlanView', () => {
   it('Raw Output section collapsed by default', () => {
     render(<PlanView result={mockResult} />);
 
-    const rawOutputButton = screen.getByRole('button', { name: /raw output/i });
+    const rawOutputButton = screen.getByRole('button', { name: /raw api response/i });
     expect(rawOutputButton).toBeInTheDocument();
     expect(rawOutputButton).toHaveAttribute('aria-expanded', 'false');
   });
@@ -70,7 +70,7 @@ describe('PlanView', () => {
   it('Raw Output expands on toggle click', () => {
     render(<PlanView result={mockResult} />);
 
-    const rawOutputButton = screen.getByRole('button', { name: /raw output/i });
+    const rawOutputButton = screen.getByRole('button', { name: /raw api response/i });
     fireEvent.click(rawOutputButton);
 
     expect(rawOutputButton).toHaveAttribute('aria-expanded', 'true');
