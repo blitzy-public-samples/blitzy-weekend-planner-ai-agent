@@ -5,7 +5,9 @@
 import { describe, it, expect } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { http, HttpResponse, delay } from 'msw';
 import App from '../src/App';
+import { server } from '../src/__mocks__/handlers';
 
 // Note: These tests use mocked handlers from the test setup
 // For true E2E testing with a live backend, use a tool like Playwright or Cypress
@@ -52,6 +54,24 @@ describe('Weekend Planner - Smoke Tests', () => {
     });
 
     it('shows loading state during plan generation', async () => {
+      // Use a delayed response to ensure loading state is visible
+      server.use(
+        http.post('http://localhost:8000/run', async () => {
+          await delay(500); // 500ms delay to make loading state visible
+          return HttpResponse.json([
+            {
+              id: 'evt-delayed-001',
+              timestamp: new Date().toISOString(),
+              author: 'model',
+              content: {
+                role: 'model',
+                parts: [{ text: 'Delayed test plan response' }]
+              }
+            }
+          ]);
+        })
+      );
+
       const user = userEvent.setup();
       render(<App />);
 

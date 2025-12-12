@@ -12,16 +12,6 @@ import { http, HttpResponse } from 'msw';
 import { setupServer } from 'msw/node';
 
 // ============================================================================
-// Constants
-// ============================================================================
-
-/**
- * Application name used in ADK API requests.
- * Matches the backend WeekendPlanner agent configuration.
- */
-const APP_NAME = 'WeekendPlanner';
-
-// ============================================================================
 // Mock Data Structures
 // ============================================================================
 
@@ -70,13 +60,14 @@ Based on the forecast, the weather looks good for outdoor activities this weeken
 
 /**
  * Mock ADK response array that simulates the backend's /run endpoint response.
- * Contains a single model event with the plan text.
+ * Contains model events with the plan text. Uses 'model' as author to match
+ * the extractPlanText function in the API client which filters for author === 'model'.
  */
 const mockPlanResponse: MockADKEvent[] = [
   {
     id: 'evt-preprocess-001',
     timestamp: new Date().toISOString(),
-    author: 'PreprocessInputAgent',
+    author: 'model',
     content: {
       role: 'model',
       parts: [{ text: '{"zip_code": "94105", "kid_ages": "5,8"}' }]
@@ -85,16 +76,16 @@ const mockPlanResponse: MockADKEvent[] = [
   {
     id: 'evt-weather-002',
     timestamp: new Date().toISOString(),
-    author: 'WeatherAgent',
+    author: 'model',
     content: {
       role: 'model',
-      parts: [{ text: 'good' }]
+      parts: [{ text: 'Weather forecast: good conditions for your weekend plan' }]
     }
   },
   {
     id: 'evt-summary-003',
     timestamp: new Date().toISOString(),
-    author: 'SummarizerAgent',
+    author: 'model',
     content: {
       role: 'model',
       parts: [{ text: SAMPLE_PLAN_TEXT }]
@@ -120,8 +111,9 @@ export const handlers = [
   /**
    * Handler for POST /run - Agent execution endpoint.
    * Returns a mock ADK response array with plan content.
+   * Uses explicit URL to match the API client's request to http://localhost:8000/run.
    */
-  http.post('*/run', () => {
+  http.post('http://localhost:8000/run', () => {
     return HttpResponse.json(mockPlanResponse, {
       status: 200,
       headers: {
@@ -133,8 +125,9 @@ export const handlers = [
   /**
    * Handler for POST /apps/:app/users/:user/sessions/:session - Session creation.
    * Returns an empty object with 200 status indicating successful session creation.
+   * Uses explicit URL to match the API client's session creation requests.
    */
-  http.post('*/apps/:app/users/:user/sessions/:session', () => {
+  http.post('http://localhost:8000/apps/:app/users/:user/sessions/:session', () => {
     return HttpResponse.json({}, {
       status: 200,
       headers: {
@@ -168,7 +161,7 @@ export const handlers = [
  * ```
  */
 export const create400Handler = () => {
-  return http.post('*/run', () => {
+  return http.post('http://localhost:8000/run', () => {
     return HttpResponse.json(
       { message: 'Invalid request' },
       {
@@ -201,7 +194,7 @@ export const create400Handler = () => {
  * ```
  */
 export const create500Handler = () => {
-  return http.post('*/run', () => {
+  return http.post('http://localhost:8000/run', () => {
     return HttpResponse.json(
       { message: 'Server error' },
       {
@@ -234,7 +227,7 @@ export const create500Handler = () => {
  * ```
  */
 export const createSessionFailureHandler = () => {
-  return http.post('*/apps/:app/users/:user/sessions/:session', () => {
+  return http.post('http://localhost:8000/apps/:app/users/:user/sessions/:session', () => {
     return HttpResponse.json(
       { message: 'Session creation failed' },
       {
@@ -260,7 +253,7 @@ export const createSessionFailureHandler = () => {
  * @returns MSW http.post handler that delays response for 60 seconds
  */
 export const createTimeoutHandler = () => {
-  return http.post('*/run', async () => {
+  return http.post('http://localhost:8000/run', async () => {
     // Delay longer than the expected 30-second timeout
     await new Promise((resolve) => setTimeout(resolve, 60000));
     return HttpResponse.json(mockPlanResponse);
@@ -273,7 +266,7 @@ export const createTimeoutHandler = () => {
  * @returns MSW http.post handler that returns invalid JSON content
  */
 export const createMalformedJsonHandler = () => {
-  return http.post('*/run', () => {
+  return http.post('http://localhost:8000/run', () => {
     return new HttpResponse('not valid json {{{', {
       status: 200,
       headers: {
@@ -289,10 +282,66 @@ export const createMalformedJsonHandler = () => {
  * @returns MSW http.post handler that triggers a network error
  */
 export const createNetworkErrorHandler = () => {
-  return http.post('*/run', () => {
+  return http.post('http://localhost:8000/run', () => {
     return HttpResponse.error();
   });
 };
+
+/**
+ * Generic error response handler factory.
+ * Creates an MSW handler that returns a custom error response for the /run endpoint.
+ * 
+ * @param status - HTTP status code to return
+ * @param body - Response body (will be JSON serialized)
+ * @returns MSW http.post handler configured with the specified error response
+ * 
+ * @example
+ * ```typescript
+ * server.use(mockErrorResponse(400, { message: 'Invalid input' }));
+ * server.use(mockErrorResponse(500, { detail: 'Server error' }));
+ * ```
+ */
+export const mockErrorResponse = (status: number, body: Record<string, unknown>) => {
+  return http.post('http://localhost:8000/run', () => {
+    return HttpResponse.json(body, {
+      status,
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    });
+  });
+};
+
+/**
+ * Pre-configured handler for malformed JSON response testing.
+ * Use directly with server.use() instead of calling as a function.
+ * 
+ * @example
+ * ```typescript
+ * server.use(mockMalformedJsonHandler);
+ * ```
+ */
+export const mockMalformedJsonHandler = http.post('http://localhost:8000/run', () => {
+  return new HttpResponse('not valid json {{{', {
+    status: 200,
+    headers: {
+      'Content-Type': 'application/json'
+    }
+  });
+});
+
+/**
+ * Pre-configured handler for network error testing.
+ * Use directly with server.use() instead of calling as a function.
+ * 
+ * @example
+ * ```typescript
+ * server.use(mockNetworkErrorHandler);
+ * ```
+ */
+export const mockNetworkErrorHandler = http.post('http://localhost:8000/run', () => {
+  return HttpResponse.error();
+});
 
 // ============================================================================
 // Server Instance
