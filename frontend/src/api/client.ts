@@ -3,7 +3,7 @@
  * Implements communication with the ADK backend using native fetch API.
  */
 
-import type { GeneratePlanInput, ADKResponse, GeneratePlanResult, ApiError } from '../types';
+import type { GeneratePlanInput, ADKResponse, GeneratePlanResult, ADKEvent, PlanError } from '../types';
 
 /** API base URL from environment or default */
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
@@ -90,28 +90,79 @@ function buildPrompt(input: GeneratePlanInput): string {
 
 /**
  * Extracts plan text from ADK response events.
- * @param response - Array of ADK events
+ * Prioritizes the final_summary from the SummarizerAgent, falling back to
+ * the last model response if no specific summary is found.
+ * 
+ * @param response - Array of ADK events from the ADK /run endpoint
  * @returns Extracted plan text or undefined if not found
  */
 function extractPlanText(response: ADKResponse): string | undefined {
-  // Find model responses with content
-  const modelEvents = response.filter(
-    (event) => event.author === 'model' && event.content?.parts
+  if (!response || response.length === 0) {
+    return undefined;
+  }
+
+  // First, look for events that might be the final summary
+  // The SummarizerAgent outputs to 'final_summary' key
+  // These events typically have author containing 'SummarizerAgent' or 'model'
+  const summarizerEvents: ADKEvent[] = response.filter(
+    (event: ADKEvent) => 
+      (event.author === 'SummarizerAgent' || event.author.includes('Summarizer')) &&
+      event.content?.parts
   );
 
-  // Extract text from all content parts
-  const textParts: string[] = [];
-  for (const event of modelEvents) {
-    if (event.content?.parts) {
-      for (const part of event.content.parts) {
+  // If we found summarizer events, extract text from them
+  if (summarizerEvents.length > 0) {
+    const textParts: string[] = [];
+    for (const event of summarizerEvents) {
+      if (event.content?.parts) {
+        for (const part of event.content.parts) {
+          if (part.text) {
+            textParts.push(part.text);
+          }
+        }
+      }
+    }
+    if (textParts.length > 0) {
+      return textParts.join('\n');
+    }
+  }
+
+  // Fall back to finding model responses with content
+  const modelEvents: ADKEvent[] = response.filter(
+    (event: ADKEvent) => event.author === 'model' && event.content?.parts
+  );
+
+  // If we have model events, prefer the last one (most likely the final output)
+  if (modelEvents.length > 0) {
+    const lastModelEvent = modelEvents[modelEvents.length - 1];
+    const textParts: string[] = [];
+    
+    if (lastModelEvent.content?.parts) {
+      for (const part of lastModelEvent.content.parts) {
         if (part.text) {
           textParts.push(part.text);
         }
       }
     }
+    
+    if (textParts.length > 0) {
+      return textParts.join('\n');
+    }
   }
 
-  return textParts.length > 0 ? textParts.join('\n') : undefined;
+  // Last resort: collect all text from any events with content
+  const allTextParts: string[] = [];
+  for (const event of response) {
+    if (event.content?.parts) {
+      for (const part of event.content.parts) {
+        if (part.text) {
+          allTextParts.push(part.text);
+        }
+      }
+    }
+  }
+
+  return allTextParts.length > 0 ? allTextParts.join('\n') : undefined;
 }
 
 /**
@@ -157,10 +208,10 @@ export async function generatePlan(
 
     if (!response.ok) {
       const errorBody = await response.text().catch(() => '');
-      const error: ApiError = {
+      const error: PlanError = {
         message: getErrorMessage(response.status, errorBody),
         statusCode: response.status,
-        rawBody: errorBody
+        body: errorBody
       };
 
       return {
