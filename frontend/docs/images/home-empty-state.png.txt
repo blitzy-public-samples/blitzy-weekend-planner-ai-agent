@@ -1,0 +1,161 @@
+================================================================================
+SCREENSHOT PLACEHOLDER: home-empty-state.png
+================================================================================
+
+FILE PURPOSE
+--------------------------------------------------------------------------------
+This file serves as a placeholder and capture guide for the home-empty-state.png
+screenshot. The actual PNG image should replace this text file in the documentation.
+
+This screenshot shows the Weekend Planner application in its initial/empty state,
+which is the first thing users see when they open the application.
+
+
+SCREENSHOT CAPTURE INSTRUCTIONS
+--------------------------------------------------------------------------------
+1. Start the Weekend Planner frontend application
+   - Navigate to the frontend directory
+   - Run: npm run dev
+   - Open browser to http://localhost:5173
+
+2. Ensure fresh application state
+   - Use a fresh browser tab or incognito/private window
+   - Clear browser cache and local storage if needed
+   - No form fields should be filled in
+   - No prior interactions should have occurred
+
+3. Capture the full application interface showing:
+   - The complete two-column layout (desktop view)
+   - Empty form on the left side
+   - Empty state placeholder on the right side
+
+
+VISUAL ELEMENTS TO INCLUDE
+--------------------------------------------------------------------------------
+The screenshot must clearly show all of the following elements:
+
+HEADER SECTION:
+  - Application title: "Weekend Planner"
+    * Style: text-3xl font-bold
+    * Color: Primary coral (#E07A5F)
+  - Subtitle: "Plan the perfect family weekend with AI"
+    * Style: text-gray-500
+
+INPUT FORM (Left Column - 40% width):
+  - Location field
+    * Label: "Location"
+    * Empty input showing placeholder text
+  - Start Date field
+    * Label: "Start Date"
+    * Empty date picker
+  - End Date field
+    * Label: "End Date"
+    * Empty date picker
+  - Kids Ages field (optional)
+    * Label: "Kids Ages"
+    * Empty input showing placeholder text
+  - Preferences field (optional)
+    * Label: "Preferences"
+    * Empty textarea showing placeholder text
+  - "Generate Plan" button
+    * Primary CTA style (coral background #E07A5F)
+    * MUST BE IN DISABLED STATE (grayed out)
+  - "Reset" button
+    * Secondary/ghost style (outline)
+
+OUTPUT PANEL (Right Column - 60% width):
+  - Empty state placeholder content
+  - Guidance text: "Enter your details and click Generate Plan"
+  - Illustration placeholder or guidance icon (if present)
+
+
+LAYOUT ELEMENTS
+--------------------------------------------------------------------------------
+  - Two-column layout: form (40%) | output (60%)
+  - Warm cream background color (#F4F1DE)
+  - Centered container with max-width 1200px
+  - Minimum 16px whitespace between sections
+  - Rounded corners (rounded-xl / 12px) on cards and inputs
+
+
+RECOMMENDED BROWSER SETTINGS
+--------------------------------------------------------------------------------
+  - Browser: Chrome, Firefox, or Edge (latest version)
+  - Window width: Exactly 1200px for optimal desktop two-column layout
+  - Window height: Sufficient to show all form fields without scrolling
+  - Zoom level: 100%
+  - Device pixel ratio: 2x recommended for retina displays
+  - Mode: Incognito/Private browsing for consistent styling
+  - Extensions: Disable all browser extensions that may affect styling
+  - Developer tools: Closed during capture
+
+
+CAPTURE STEPS
+--------------------------------------------------------------------------------
+1. Set browser window to 1200px width
+2. Clear all browser data for localhost
+3. Navigate to http://localhost:5173
+4. Wait for full page load (all fonts and styles loaded)
+5. Verify "Generate Plan" button is disabled
+6. Verify output panel shows empty state guidance text
+7. Take screenshot using preferred tool:
+   - macOS: Cmd + Shift + 4, then Space to capture window
+   - Windows: Win + Shift + S or Snipping Tool
+   - Browser DevTools: Device toolbar > Capture screenshot
+8. Save as: home-empty-state.png
+
+
+FILE NAMING AND FORMAT
+--------------------------------------------------------------------------------
+  - Filename: home-empty-state.png
+  - Format: PNG (lossless compression)
+  - Resolution: 2x for retina displays (e.g., 2400px width for 1200px display)
+  - Color space: sRGB
+  - No transparency required
+
+
+DOCUMENTATION REFERENCES
+--------------------------------------------------------------------------------
+This screenshot is used in the following documentation files:
+
+  1. frontend/docs/getting-started.md
+     - Section: Step 1 - Open the Application
+     - Purpose: Show users what they should see when first opening the app
+
+  2. frontend/docs/README.md
+     - Section: Screenshots
+     - Purpose: Overview of application states
+
+  3. frontend/docs/user-guide.md
+     - Section: Getting Started / Initial State
+     - Purpose: Reference for the starting point of user journey
+
+
+QUALITY CHECKLIST
+--------------------------------------------------------------------------------
+Before finalizing the screenshot, verify:
+
+  [ ] Application header with title and subtitle is fully visible
+  [ ] All 5 form fields are visible with their labels
+  [ ] All form fields are empty (showing placeholders only)
+  [ ] "Generate Plan" button is visibly DISABLED
+  [ ] "Reset" button is visible
+  [ ] Output panel shows "Enter your details and click Generate Plan"
+  [ ] Two-column layout is properly displayed
+  [ ] Background color is warm cream (#F4F1DE)
+  [ ] No browser UI elements in screenshot (address bar, tabs, etc.)
+  [ ] Image is crisp and readable at intended display size
+  [ ] No sensitive or personal information visible
+
+
+NOTES FOR DOCUMENTATION MAINTAINERS
+--------------------------------------------------------------------------------
+- This placeholder file should be REPLACED with the actual PNG screenshot
+- Keep this .txt file as a backup reference for recapturing if UI changes
+- Update this file if the UI design changes significantly
+- Coordinate screenshot updates when major UI updates are deployed
+- Consider creating screenshots in both light mode (if dark mode is added later)
+
+================================================================================
+END OF PLACEHOLDER DOCUMENT
+================================================================================
