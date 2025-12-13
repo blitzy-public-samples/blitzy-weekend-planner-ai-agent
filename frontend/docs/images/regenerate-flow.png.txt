@@ -1,0 +1,164 @@
+================================================================================
+SCREENSHOT PLACEHOLDER: regenerate-flow.png
+================================================================================
+
+FILE PURPOSE
+------------
+This is a placeholder file for the regenerate-flow.png screenshot. The actual
+PNG image should be captured and saved to replace this text file. This
+screenshot documents the workflow for regenerating or resetting a plan in the
+Weekend Planner application.
+
+
+SCREENSHOT CAPTURE INSTRUCTIONS
+-------------------------------
+This screenshot should demonstrate the regenerate/reset workflow - showing how
+users can start over or create a new plan after viewing results. This may be
+captured as a single screenshot or as a composite image showing the flow.
+
+
+CAPTURE OPTIONS
+---------------
+
+Option A - Single Screenshot with Reset Button Focus:
+  • Show the application after a plan has been successfully generated
+  • Highlight or draw attention to the "Reset" button
+  • Form fields should still contain the previously entered data
+  • Output panel shows the generated plan
+  • User can see both their input and the option to start fresh
+
+Option B - Before/After Composite Image:
+  • LEFT SIDE: Application with generated plan and filled form
+    - Shows successful state with plan visible
+    - Form contains user's original input data
+    - Both "Generate Plan" and "Reset" buttons visible
+  • RIGHT SIDE: Application after Reset clicked (empty state)
+    - All form fields cleared
+    - Output panel shows empty state message
+    - "Generate Plan" button disabled
+  • Include an arrow or visual indicator showing the transition flow
+
+Option C - Regenerate Action Screenshot:
+  • Form fields with MODIFIED values (different from original submission)
+  • Previous plan still visible in output panel
+  • Cursor/highlight on "Generate Plan" button ready to be clicked
+  • Shows user can adjust inputs and generate a new plan
+
+
+VISUAL ELEMENTS TO INCLUDE
+--------------------------
+  • "Reset" button - secondary/ghost style with outline
+    - Should be clearly visible and identifiable
+    - Located near the form submission area
+  
+  • "Generate Plan" button - primary CTA in coral color (#E07A5F)
+    - Shows the option to generate again with modified inputs
+  
+  • Form fields with data entered:
+    - Location field populated
+    - Start and End date fields filled
+    - Optional fields (Kids Ages, Preferences) may be filled
+  
+  • Visual indication that regeneration/reset is possible:
+    - Clear UI affordances for starting over
+    - User path forward is obvious
+
+
+USER FLOW BEING DOCUMENTED
+--------------------------
+This screenshot illustrates the following user journey:
+
+1. User has already generated a weekend plan successfully
+2. User wants to either:
+   a) Modify their input and generate a different plan
+   b) Clear everything and start completely fresh
+3. User has two options available:
+   a) Click "Reset" → Clears all form fields and output
+   b) Modify form fields → Click "Generate Plan" again for new results
+4. Both workflows return the user to a state where they can plan again
+
+
+STEP-BY-STEP CAPTURE INSTRUCTIONS
+---------------------------------
+1. Start with a completed plan generation:
+   - Fill form with sample data (e.g., "San Francisco", weekend dates)
+   - Click "Generate Plan" and wait for results
+   - Verify plan is displayed successfully
+
+2. For Option A (Reset Focus):
+   - Position browser window to show both form and output
+   - Use browser annotation tool or screenshot editor to highlight Reset button
+   - Capture screenshot showing the full interface
+
+3. For Option B (Before/After Composite):
+   - Capture "before" screenshot with plan visible
+   - Click "Reset" button
+   - Capture "after" screenshot showing cleared state
+   - Use image editing software to create side-by-side composite
+   - Add arrow or transition indicator between panels
+
+4. For Option C (Regenerate):
+   - After generating a plan, modify some form values
+   - Change location to a different city
+   - Update dates or kids ages
+   - Position cursor near "Generate Plan" button
+   - Capture screenshot showing modified inputs with old plan visible
+
+
+RECOMMENDED BROWSER SETTINGS
+----------------------------
+  • Browser window width: 1200px (shows full desktop two-column layout)
+  • Viewport height: Tall enough to show complete form and meaningful output
+  • Both form (left 40%) and output panel (right 60%) should be visible
+  • Clear browser cache before starting capture session
+  • Use incognito/private mode for consistent styling
+  • Disable browser extensions that might affect appearance
+
+
+FILE SPECIFICATIONS
+-------------------
+  • Filename: regenerate-flow.png
+  • Format: PNG (preferred for UI screenshots)
+  • Resolution: 2x for retina/high-DPI displays
+  • Color profile: sRGB
+  • If creating composite:
+    - Ensure each panel is clearly separated
+    - Use consistent padding between panels
+    - Add clear visual flow indicators (arrows)
+    - Total width should not exceed 2400px for readability
+
+
+APPLICATION COLORS REFERENCE
+----------------------------
+  • Primary/CTA color (Generate button): #E07A5F (soft coral)
+  • Background color: #F4F1DE (warm cream)
+  • Text color: #3D405B (deep charcoal)
+  • Success color: #81B29A (sage green)
+  • Secondary button (Reset): Outline style, subtle border
+
+
+DOCUMENTATION REFERENCE
+-----------------------
+This screenshot is used in:
+  • user-guide.md - "Starting Over" section
+  • Demonstrates the workflow for retry/regeneration
+  • Helps users understand how to modify their plan request
+
+
+QUALITY CHECKLIST
+-----------------
+Before finalizing the screenshot, verify:
+  [ ] Reset button is clearly visible and identifiable
+  [ ] Generate Plan button shows primary CTA styling
+  [ ] Form has realistic sample data entered
+  [ ] Output panel shows a valid generated plan (or before/after states)
+  [ ] Text is readable at documentation display sizes
+  [ ] No personal information visible in form fields
+  [ ] Browser chrome is cropped out (unless showing full window intentionally)
+  [ ] Image is not blurry or pixelated
+  [ ] Color rendering matches application colors
+
+
+================================================================================
+END OF PLACEHOLDER - Replace this file with actual regenerate-flow.png
+================================================================================

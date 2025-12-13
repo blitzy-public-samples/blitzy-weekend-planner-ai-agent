@@ -1,0 +1,138 @@
+================================================================================
+SCREENSHOT PLACEHOLDER: form-filled.png
+================================================================================
+
+FILE PURPOSE
+--------------------------------------------------------------------------------
+This is a placeholder file for the form-filled.png screenshot that will be used
+in the Weekend Planner frontend documentation. The actual screenshot should show
+the InputForm component with all fields populated with valid sample data and the
+"Generate Plan" button enabled and ready to click.
+
+
+SCREENSHOT CAPTURE INSTRUCTIONS
+--------------------------------------------------------------------------------
+1. Start the Weekend Planner application:
+   - Terminal 1: Run `adk web` from the repository root (backend at port 8000)
+   - Terminal 2: Run `cd frontend && npm run dev` (frontend at port 5173)
+
+2. Open browser to http://localhost:5173
+
+3. Fill in all form fields with the sample data specified below
+
+4. Verify the "Generate Plan" button is enabled (coral color, clickable)
+
+5. Capture the screenshot before clicking the button
+
+
+SAMPLE DATA TO ENTER
+--------------------------------------------------------------------------------
+Fill in the following values in the form fields:
+
+  • Location:     "San Francisco, CA" or "94102"
+  
+  • Start Date:   A Saturday date (e.g., the upcoming weekend)
+                  Example: 2024-12-14
+  
+  • End Date:     The following Sunday (same weekend as start date)
+                  Example: 2024-12-15
+  
+  • Kids Ages:    "3, 7, 12"
+                  (comma-separated list of ages)
+  
+  • Preferences:  "outdoor activities, avoid crowds, near parks"
+                  (free-form text describing activity preferences)
+
+
+VISUAL ELEMENTS TO INCLUDE
+--------------------------------------------------------------------------------
+The screenshot MUST capture the following elements:
+
+  ✓ Application header with "Weekend Planner" title
+  ✓ All form field labels clearly visible:
+      - Location
+      - Start Date
+      - End Date
+      - Kids Ages (optional)
+      - Preferences (optional)
+  ✓ All input values clearly readable in their respective fields
+  ✓ "Generate Plan" button in ENABLED state:
+      - Coral/salmon background color (bg-[#E07A5F])
+      - White text
+      - Fully clickable appearance (not grayed out)
+  ✓ "Reset" button visible (secondary/outline style)
+  ✓ NO validation error messages showing
+  ✓ Clean, professional appearance with warm cream background (bg-[#F4F1DE])
+
+
+RECOMMENDED BROWSER SETTINGS
+--------------------------------------------------------------------------------
+For consistent and high-quality screenshots:
+
+  • Browser:          Chrome, Firefox, or Edge (latest version)
+  • Window Width:     1200px minimum (for desktop two-column layout)
+  • Zoom Level:       100% (default)
+  • Mode:             Incognito/Private browsing (for consistent styling)
+  • DevTools:         Closed (not visible in screenshot)
+  • Extensions:       Disable browser extensions that may affect styling
+  • Cache:            Clear browser cache before capture
+
+Layout Notes:
+  - At 1200px width, the form should appear in the left ~40% column
+  - The output/results area should be visible in the right ~60% column
+  - The output area should show empty state placeholder text
+
+
+FILE NAMING CONVENTION
+--------------------------------------------------------------------------------
+  • Filename:     form-filled.png
+  • Format:       PNG (lossless compression)
+  • Resolution:   2x for retina displays recommended
+                  (capture at 2400px width, display at 1200px)
+  • File Size:    Optimize for web (aim for < 500KB)
+  • Location:     Save to frontend/docs/images/form-filled.png
+
+
+REFERENCE IN DOCUMENTATION
+--------------------------------------------------------------------------------
+This screenshot is referenced in the following documentation files:
+
+  1. frontend/docs/getting-started.md
+     - Steps 2-5: "Filling Out the Form"
+     - Shows users how to enter their weekend planning details
+  
+  2. frontend/docs/user-guide.md
+     - "The Input Form" section
+     - Demonstrates a complete, valid form submission setup
+
+
+SCREENSHOT CHECKLIST
+--------------------------------------------------------------------------------
+Before saving the final screenshot, verify:
+
+  [ ] Location field has "San Francisco, CA" or "94102" entered
+  [ ] Start Date shows a valid Saturday date
+  [ ] End Date shows a valid Sunday date (same weekend)
+  [ ] Kids Ages shows "3, 7, 12"
+  [ ] Preferences shows "outdoor activities, avoid crowds, near parks"
+  [ ] Generate Plan button is coral-colored and enabled
+  [ ] Reset button is visible
+  [ ] No error messages are displayed
+  [ ] Form appears in left column (desktop layout)
+  [ ] Output area shows empty state placeholder
+  [ ] Screenshot resolution is appropriate for documentation
+  [ ] File is saved as PNG format
+
+
+ADDITIONAL NOTES
+--------------------------------------------------------------------------------
+  • This screenshot demonstrates the "ready to submit" state of the form
+  • It should convey to users that all required fields are properly filled
+  • The enabled state of the Generate Plan button indicates form validity
+  • Compare with form-validation-error.png to show the contrast between
+    valid and invalid form states
+
+
+================================================================================
+END OF PLACEHOLDER FILE
+================================================================================

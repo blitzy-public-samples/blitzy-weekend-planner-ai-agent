@@ -33,6 +33,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- React frontend application for Weekend Planner
+- User input form with date and location validation
+- Plan display with collapsible raw output
+- Comprehensive test suite with 80%+ coverage
+- End-user documentation in `/docs` folder
+
 ### Planned
 - Geographic filtering improvements
 - Age-specific activity curation

@@ -1,0 +1,213 @@
+=============================================================================
+SCREENSHOT PLACEHOLDER: plan-raw-output.png
+=============================================================================
+
+FILE PURPOSE
+-----------------------------------------------------------------------------
+This is a placeholder file for the plan-raw-output.png screenshot. The actual
+PNG image should be captured following the instructions below and saved with
+the same filename (replacing this .txt file extension with .png).
+
+This screenshot shows a successfully generated weekend plan with the Raw
+Output section EXPANDED to display the full JSON response from the ADK
+backend. It is intended for technical users and advanced documentation.
+
+
+SCREENSHOT CAPTURE INSTRUCTIONS
+-----------------------------------------------------------------------------
+Goal: Capture a screenshot showing a generated plan with the Raw Output
+section EXPANDED, displaying the underlying JSON response structure.
+
+This screenshot builds on the plan-result.png state but with the additional
+Raw Output panel visible and open.
+
+
+HOW TO CAPTURE THIS STATE
+-----------------------------------------------------------------------------
+1. Prerequisites:
+   - Ensure the ADK backend is running (execute `adk web` in terminal)
+   - Open the Weekend Planner frontend at http://localhost:5173
+   - Clear browser cache and use incognito/private mode for consistency
+
+2. Generate a Plan:
+   - Fill the form with sample data:
+     * Location: "San Francisco, CA" or "94102"
+     * Start Date: An upcoming Saturday
+     * End Date: The following Sunday
+     * Kids Ages: "5, 10"
+     * Preferences: "outdoor activities, family-friendly"
+   - Click the "Generate Plan" button
+   - Wait for the plan to load successfully
+
+3. Expand Raw Output:
+   - Locate the "Raw Output" collapsible section below the plan summary
+   - Click the toggle/button to EXPAND the Raw Output section
+   - The JSON content should now be visible
+
+4. Position for Screenshot:
+   - Scroll the page to show both the plan summary AND the raw output
+   - Ensure meaningful JSON content is visible in the viewport
+   - May need to adjust scroll position for optimal content display
+
+
+VISUAL ELEMENTS TO INCLUDE
+-----------------------------------------------------------------------------
+The screenshot should clearly show:
+
+1. Plan Result Summary (at top):
+   - The generated weekend plan recommendations
+   - Activity suggestions and summary text
+   - Weather-aware content if displayed
+
+2. Raw Output Section Header:
+   - "Raw Output" section title/label
+   - Toggle indicator showing "expanded" state (e.g., chevron pointing down)
+   - Visual distinction from main plan content
+
+3. JSON Response Block:
+   - Preformatted JSON in a code/monospace block
+   - Visible JSON fields should include:
+     * "id" - Event unique identifier
+     * "timestamp" - ISO8601 timestamp
+     * "author" - Shows "model" for AI responses
+     * "content" - Contains parts array with text
+   - Scrollable container if content is lengthy
+
+4. ADK Response Structure:
+   The JSON should reflect the ADK event-based response format:
+   ```
+   [
+     {
+       "id": "event_xxx",
+       "timestamp": "2024-XX-XXTXX:XX:XX.XXXZ",
+       "author": "model",
+       "content": {
+         "parts": [{ "text": "..." }],
+         "role": "model"
+       }
+     },
+     ...
+   ]
+   ```
+
+
+JSON DISPLAY ELEMENTS
+-----------------------------------------------------------------------------
+Ensure the following display characteristics are visible:
+
+- Monospace/code font for JSON content (e.g., Consolas, Monaco, monospace)
+- Proper indentation showing nested structure (2-space or 4-space indent)
+- Line breaks between JSON objects for readability
+- Syntax highlighting if implemented in the component:
+  * String values in one color
+  * Property keys in another color
+  * Brackets/braces clearly visible
+- Scroll position showing meaningful content:
+  * Include at least one complete event object
+  * Show nested "content" and "parts" structure
+  * Capture the author "model" field if possible
+
+
+RECOMMENDED BROWSER SETTINGS
+-----------------------------------------------------------------------------
+- Browser: Chrome, Firefox, or Safari (latest version)
+- Window width: 1200px for desktop two-column layout
+- Viewport height: May need 900px+ to capture both summary and raw output
+- Scroll position: Show both plan summary at top and raw output below
+- DevTools: Closed (or use a separate window)
+- Cache: Clear before capture
+- Mode: Incognito/Private for consistent styling
+- Zoom level: 100%
+- Color scheme: Light mode (default)
+
+Network Settings (if needed to slow down for capture):
+- Use DevTools Network tab
+- Disable throttling for this capture (want successful result)
+
+
+FILE NAMING CONVENTION
+-----------------------------------------------------------------------------
+Filename: plan-raw-output.png
+Format: PNG
+Resolution: 2x recommended for retina/high-DPI displays
+Dimensions: Capture the full visible area showing both elements
+Quality: Lossless PNG format for text clarity
+
+If capturing at 2x resolution:
+- Set browser zoom to 100%
+- Use OS screenshot tools or browser DevTools for device pixel ratio
+
+
+REFERENCE IN DOCUMENTATION
+-----------------------------------------------------------------------------
+This screenshot is used in the following documentation files:
+
+1. user-guide.md
+   - Section: "Viewing Raw Output" or "For Technical Users"
+   - Context: Shows how to expand the raw output for debugging
+   - Caption suggestion: "Clicking 'Raw Output' reveals the full JSON response"
+
+2. troubleshooting.md
+   - Section: "Debugging API Responses"
+   - Context: Helps users inspect actual API response for issues
+   - Caption suggestion: "Expand Raw Output to see the complete server response"
+
+Target Audience:
+- Technical users who want to see the underlying API response
+- Developers debugging issues with plan generation
+- Users curious about how the AI response is structured
+
+
+SCREENSHOT CHECKLIST
+-----------------------------------------------------------------------------
+Before saving the screenshot, verify:
+
+[ ] Plan summary is visible at the top of the output panel
+[ ] "Raw Output" section is EXPANDED (not collapsed)
+[ ] Toggle indicator shows expanded state
+[ ] JSON content is visible and readable
+[ ] At least one complete ADK event object is shown
+[ ] JSON formatting includes proper indentation
+[ ] Monospace font is used for JSON display
+[ ] Scroll position shows meaningful JSON content
+[ ] Browser chrome is minimal or cropped out
+[ ] Text is sharp and readable (not blurry)
+[ ] No personal information visible in JSON
+[ ] Color scheme matches application design
+
+
+ACCESSIBILITY NOTES
+-----------------------------------------------------------------------------
+When capturing this screenshot, note that the actual component should have:
+- aria-expanded attribute on the toggle button
+- Proper focus indicators if keyboard-navigated
+- Screen reader announcement of expanded/collapsed state
+
+The screenshot documentation should describe these accessibility features
+for users who may not be able to see the visual representation.
+
+
+ALTERNATIVE CAPTURE METHODS
+-----------------------------------------------------------------------------
+Method 1: Browser Screenshot
+- Use keyboard shortcut (Cmd+Shift+4 on Mac, Win+Shift+S on Windows)
+- Select the output panel area including raw output
+
+Method 2: DevTools Capture
+- Open DevTools (F12)
+- Click the device toolbar icon
+- Set a custom viewport size
+- Use "Capture screenshot" from the menu (three dots)
+
+Method 3: Browser Extension
+- Use a screenshot extension like "Full Page Screen Capture"
+- Capture only the visible viewport
+- Crop to focus on the raw output area
+
+Method 4: Design Tool
+- Use Figma, Sketch, or similar to capture from browser
+- Helpful for adding annotations or highlights later
+
+=============================================================================
+END OF PLACEHOLDER FILE
+=============================================================================

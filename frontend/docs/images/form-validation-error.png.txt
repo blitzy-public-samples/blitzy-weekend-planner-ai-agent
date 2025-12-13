@@ -1,0 +1,169 @@
+# Form Validation Error Screenshot Placeholder
+
+## File Purpose
+
+This is a placeholder file for `form-validation-error.png` - a documentation screenshot showing the Weekend Planner input form with inline validation errors displayed. The primary use case for this screenshot is to illustrate what users see when they enter invalid date combinations.
+
+---
+
+## Screenshot Capture Instructions
+
+Capture a screenshot of the Weekend Planner application's input form showing validation errors. The primary validation scenario to capture is when the End Date is set before the Start Date, which triggers an inline error message.
+
+**Key Requirements:**
+- The form should display the inline validation error
+- The "Generate Plan" button must be in the disabled state
+- The error message should be clearly visible and readable
+
+---
+
+## How to Trigger Validation Error
+
+Follow these steps to reproduce the validation error state for capture:
+
+1. Open the Weekend Planner application in your browser at `http://localhost:5173`
+2. Enter a valid location in the Location field (e.g., "San Francisco")
+3. Select a Start Date using the date picker (e.g., select a Saturday like December 14, 2024)
+4. Select an End Date that is BEFORE the Start Date (e.g., select Friday December 13, 2024)
+5. The inline error message "End date must be on or after start date" should now appear
+6. The "Generate Plan" button should automatically be disabled
+
+**Note:** Do not fill in optional fields (Kids Ages, Preferences) unless they help illustrate the validation state more clearly.
+
+---
+
+## Visual Elements to Include
+
+Ensure the following elements are visible and clear in the screenshot:
+
+### Form Fields
+- Location field with a valid value entered (e.g., "San Francisco")
+- Start Date field with a valid date selected and displayed
+- End Date field with an earlier (invalid) date selected
+- Kids Ages field (can be empty)
+- Preferences field (can be empty)
+
+### Error Indicators
+- Red inline error message visible near the date fields
+- Error text reading: "End date must be on or after start date"
+- Error styling on the End Date field (red border or highlight)
+
+### Button States
+- "Generate Plan" button in disabled state (grayed out, not clickable)
+- "Reset" button visible (should remain enabled)
+
+### Layout
+- Form area clearly visible (40% width on desktop)
+- Output panel visible but showing empty state (60% width on desktop)
+
+---
+
+## Color Reference for Errors
+
+Use these color values as reference when verifying the screenshot accuracy:
+
+| Element | Color Code | Color Name |
+|---------|------------|------------|
+| Error text | #E63946 | Muted Red |
+| Error border | #E63946 | Muted Red |
+| Disabled button | Grayed/Muted | - |
+| Background | #F4F1DE | Warm Cream |
+| Text color | #3D405B | Deep Charcoal |
+
+The error color (#E63946) should stand out clearly against the warm cream background to ensure validation messages are noticeable.
+
+---
+
+## Recommended Browser Settings
+
+For consistent and high-quality screenshot capture:
+
+### Window Dimensions
+- Browser window width: 1200px for desktop two-column view
+- Alternatively: 768px for mobile single-column view (optional variant)
+
+### Browser Configuration
+- Clear browser cache before capture
+- Use incognito/private browsing mode for consistent styling
+- Disable browser extensions that might affect page appearance
+- Ensure zoom level is set to 100%
+
+### Focus and Visibility
+- The form area should be the primary focus of the screenshot
+- All form fields should be fully visible without scrolling
+- Error message must be completely visible without being cut off
+
+### Capture Tips
+- Use browser developer tools to verify exact width (F12 → Toggle device toolbar)
+- Take screenshot during a stable state (no animations in progress)
+- Verify error message is fully rendered before capture
+
+---
+
+## File Naming Convention
+
+When saving the actual screenshot:
+
+| Property | Value |
+|----------|-------|
+| Filename | form-validation-error.png |
+| Format | PNG |
+| Resolution | 2x for retina displays recommended |
+| Location | frontend/docs/images/ |
+
+### Quality Guidelines
+- Use PNG format for sharp text rendering
+- Capture at 2x resolution for retina display support
+- Optimize file size while maintaining readability
+- Ensure text remains crisp and legible
+
+---
+
+## Reference in Documentation
+
+This screenshot will be referenced in the following documentation files:
+
+### user-guide.md
+- **Section:** Form Validation
+- **Purpose:** Shows users what validation errors look like and how to identify them
+
+### troubleshooting.md
+- **Section:** Form Issues
+- **Purpose:** Helps users understand and resolve date validation errors
+
+### Usage Example in Documentation
+
+```markdown
+![Form validation error showing end date before start date](images/form-validation-error.png)
+```
+
+---
+
+## Capture Checklist
+
+Before finalizing the screenshot, verify:
+
+- [ ] Location field contains valid text (e.g., "San Francisco")
+- [ ] Start Date shows a valid date
+- [ ] End Date shows a date BEFORE the Start Date
+- [ ] Error message "End date must be on or after start date" is visible
+- [ ] Error message uses red color (#E63946)
+- [ ] End Date field has error styling (red border)
+- [ ] "Generate Plan" button is visibly disabled/grayed out
+- [ ] "Reset" button is visible
+- [ ] Screenshot is at correct resolution (1200px width recommended)
+- [ ] No other UI elements obstruct the form
+- [ ] Browser chrome is not included (page content only)
+
+---
+
+## Notes for Maintainers
+
+- This placeholder file should be replaced with the actual PNG screenshot once the frontend application is running
+- If the error message text changes in the codebase, update this placeholder with the new text
+- Keep this .txt file even after adding the actual screenshot for documentation reference
+- Update the checklist items if form validation behavior changes
+
+---
+
+*Last Updated: This placeholder was created as part of the Weekend Planner frontend documentation setup.*
