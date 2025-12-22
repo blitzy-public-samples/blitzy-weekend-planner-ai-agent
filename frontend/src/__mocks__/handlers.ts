@@ -173,12 +173,16 @@ export const handlers = [
 // ============================================================================
 
 /**
- * Creates an MSW handler that returns a 400 Bad Request response for the session endpoint.
+ * Creates an MSW handler that returns a 400 Bad Request response for the message step.
+ * 
+ * This handler supports the two-step session flow:
+ * - Step 1 (session creation): Empty body - returns success
+ * - Step 2 (message sending): Body with new_message - returns 400 error
  * 
  * Use this handler with server.use() in specific tests to simulate client-side
  * request validation errors from the backend.
  * 
- * @returns MSW http.post handler configured for 400 error response
+ * @returns MSW http.post handler configured for 400 error response on message step
  * 
  * @example
  * ```typescript
@@ -192,9 +196,31 @@ export const handlers = [
  * ```
  */
 export const create400Handler = () => {
-  return http.post('http://localhost:8000/apps/:app/users/:user/sessions/:session', () => {
+  return http.post('http://localhost:8000/apps/:app/users/:user/sessions/:session', async ({ request }) => {
+    // Parse body to determine request type
+    let body: Record<string, unknown> | null = null;
+    try {
+      const text = await request.text();
+      if (text && text.trim()) {
+        body = JSON.parse(text);
+      }
+    } catch {
+      body = null;
+    }
+
+    const isEmpty = !body || Object.keys(body).length === 0;
+    
+    if (isEmpty) {
+      // Session creation succeeds
+      return HttpResponse.json({}, {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
+    // Message request returns 400 error
     return HttpResponse.json(
-      { message: 'Invalid request' },
+      { error: 'Invalid input' },
       {
         status: 400,
         headers: {
@@ -206,12 +232,16 @@ export const create400Handler = () => {
 };
 
 /**
- * Creates an MSW handler that returns a 500 Internal Server Error response for the session endpoint.
+ * Creates an MSW handler that returns a 500 Internal Server Error response for the message step.
+ * 
+ * This handler supports the two-step session flow:
+ * - Step 1 (session creation): Empty body - returns success
+ * - Step 2 (message sending): Body with new_message - returns 500 error
  * 
  * Use this handler with server.use() in specific tests to simulate server-side
  * errors from the backend ADK server.
  * 
- * @returns MSW http.post handler configured for 500 error response
+ * @returns MSW http.post handler configured for 500 error response on message step
  * 
  * @example
  * ```typescript
@@ -225,7 +255,29 @@ export const create400Handler = () => {
  * ```
  */
 export const create500Handler = () => {
-  return http.post('http://localhost:8000/apps/:app/users/:user/sessions/:session', () => {
+  return http.post('http://localhost:8000/apps/:app/users/:user/sessions/:session', async ({ request }) => {
+    // Parse body to determine request type
+    let body: Record<string, unknown> | null = null;
+    try {
+      const text = await request.text();
+      if (text && text.trim()) {
+        body = JSON.parse(text);
+      }
+    } catch {
+      body = null;
+    }
+
+    const isEmpty = !body || Object.keys(body).length === 0;
+    
+    if (isEmpty) {
+      // Session creation succeeds
+      return HttpResponse.json({}, {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
+    // Message request returns 500 error
     return HttpResponse.json(
       { message: 'Server error' },
       {

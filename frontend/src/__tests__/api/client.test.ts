@@ -124,12 +124,33 @@ describe('API Client', () => {
      * and extracts error details from the response body.
      * 
      * The two-step session flow uses the session endpoint for both operations.
+     * Session creation (empty body) succeeds, message sending returns 400.
      */
     it('handles 400 Bad Request with structured error', async () => {
-      // Set up handler to return 400 Bad Request with error details
-      // The session endpoint is used for both session creation and message sending
+      // Set up handler that supports two-step flow:
+      // - Session creation (empty body) succeeds
+      // - Message sending (with new_message) returns 400
       server.use(
-        http.post('http://localhost:8000/apps/:app/users/:user/sessions/:session', () => {
+        http.post('http://localhost:8000/apps/:app/users/:user/sessions/:session', async ({ request }) => {
+          // Parse body to determine request type
+          let body: Record<string, unknown> | null = null;
+          try {
+            const text = await request.text();
+            if (text && text.trim()) {
+              body = JSON.parse(text);
+            }
+          } catch {
+            body = null;
+          }
+
+          const isEmpty = !body || Object.keys(body).length === 0;
+          
+          if (isEmpty) {
+            // Session creation succeeds
+            return HttpResponse.json({}, { status: 200 });
+          }
+
+          // Message request returns 400 error
           return HttpResponse.json(
             { error: 'Invalid input' },
             { status: 400 }
