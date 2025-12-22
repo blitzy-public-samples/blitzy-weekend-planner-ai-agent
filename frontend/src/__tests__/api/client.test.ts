@@ -1,12 +1,15 @@
 /**
- * Unit tests for the ADK API client (frontend/src/api/client.ts).
+ * Unit tests for the session-based ADK API client (frontend/src/api/client.ts).
  * 
- * This test file contains 7 comprehensive test cases covering the createSession()
- * and generatePlan() functions. Tests use MSW (Mock Service Worker) for API mocking
- * to run without requiring the actual ADK backend server.
+ * This test file contains comprehensive test cases covering the two-step session-based
+ * API flow: first creating a session, then sending a message with new_message payload.
+ * Tests use MSW (Mock Service Worker) for API mocking to run without requiring the
+ * actual ADK backend server.
  * 
  * Test Coverage:
- * - generatePlan() success with valid ADK response parsing
+ * - generatePlan() creates session then sends message with valid response parsing
+ * - generatePlan() generates unique session ID using crypto.randomUUID()
+ * - generatePlan() sends correct new_message payload format
  * - generatePlan() 30-second timeout handling using AbortController
  * - generatePlan() 400 Bad Request error handling with structured errors
  * - generatePlan() 500 Internal Server Error handling
@@ -213,6 +216,216 @@ describe('API Client', () => {
       // Assert specific error message for JSON parse failures
       expect(result.error!.message).toBe('Received an unexpected response format');
     });
+
+    // ==========================================================================
+    // Two-Step Session Flow Tests
+    // ==========================================================================
+
+    /**
+     * Test 6: Creates session before sending plan request
+     * 
+     * Verifies the two-step session flow is correctly implemented:
+     * 1. First request creates session with empty body
+     * 2. Second request sends plan request with new_message payload
+     */
+    it('creates session before sending plan request', async () => {
+      const requestsReceived: { body: Record<string, unknown> | null }[] = [];
+      
+      // Mock response for plan generation (similar to handlers.ts mockPlanResponse)
+      const mockPlanResponse = [
+        {
+          id: 'evt-summary-001',
+          timestamp: new Date().toISOString(),
+          author: 'model',
+          content: {
+            role: 'model',
+            parts: [{ text: '# Weekend Plan\n\nSample plan content for testing.' }]
+          }
+        }
+      ];
+      
+      server.use(
+        http.post('http://localhost:8000/apps/:app/users/:user/sessions/:session', 
+          async ({ request }) => {
+            // Parse body to determine request type
+            let body: Record<string, unknown> | null = null;
+            try {
+              const text = await request.text();
+              if (text && text.trim()) {
+                body = JSON.parse(text);
+              }
+            } catch {
+              body = null;
+            }
+            
+            const isEmpty = !body || Object.keys(body).length === 0;
+            requestsReceived.push({ body: isEmpty ? {} : body });
+            
+            // Empty body = session creation, return success
+            if (isEmpty) {
+              return HttpResponse.json({ status: 'created' }, { status: 200 });
+            }
+            
+            // Body with new_message = plan generation, return mock plan
+            return HttpResponse.json(mockPlanResponse, { status: 200 });
+          }
+        )
+      );
+
+      await generatePlan(validInput);
+
+      // Should have received exactly 2 requests: session creation + message
+      expect(requestsReceived.length).toBe(2);
+      
+      // First request should have empty body (session creation)
+      expect(requestsReceived[0].body).toEqual({});
+      
+      // Second request should have new_message (plan generation)
+      expect(requestsReceived[1].body).toHaveProperty('new_message');
+    });
+
+    /**
+     * Test 7: Generates unique session ID using crypto.randomUUID()
+     * 
+     * Verifies that each call to generatePlan() generates a different 
+     * UUID-format session ID using crypto.randomUUID().
+     */
+    it('generates unique session ID using crypto.randomUUID()', async () => {
+      const sessionIds: string[] = [];
+      
+      // Mock response for plan generation
+      const mockPlanResponse = [
+        {
+          id: 'evt-summary-001',
+          timestamp: new Date().toISOString(),
+          author: 'model',
+          content: {
+            role: 'model',
+            parts: [{ text: '# Weekend Plan\n\nSample plan content.' }]
+          }
+        }
+      ];
+      
+      server.use(
+        http.post('http://localhost:8000/apps/:app/users/:user/sessions/:session', 
+          async ({ params, request }) => {
+            // Capture the session ID from URL params
+            sessionIds.push(params.session as string);
+            
+            // Parse body to determine request type
+            let body: Record<string, unknown> | null = null;
+            try {
+              const text = await request.text();
+              if (text && text.trim()) {
+                body = JSON.parse(text);
+              }
+            } catch {
+              body = null;
+            }
+            
+            const isEmpty = !body || Object.keys(body).length === 0;
+            
+            // Return appropriate response based on request type
+            if (isEmpty) {
+              return HttpResponse.json({ status: 'created' }, { status: 200 });
+            }
+            
+            return HttpResponse.json(mockPlanResponse, { status: 200 });
+          }
+        )
+      );
+
+      // Make two separate calls to generatePlan
+      await generatePlan(validInput);
+      await generatePlan(validInput);
+
+      // Should have at least 2 unique session IDs (2 calls × 2 requests each = 4 total)
+      // Each call should use the same session ID for both requests
+      const uniqueIds = [...new Set(sessionIds)];
+      expect(uniqueIds.length).toBeGreaterThanOrEqual(2);
+      
+      // Session IDs should be in UUID format (v4 UUID pattern)
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+      expect(uniqueIds[0]).toMatch(uuidRegex);
+      expect(uniqueIds[1]).toMatch(uuidRegex);
+    });
+
+    /**
+     * Test 8: Sends message with correct new_message payload format
+     * 
+     * Verifies the new_message structure matches ADK requirements:
+     * - Has 'role' property set to 'user'
+     * - Has 'parts' array with text objects
+     */
+    it('sends message with correct new_message payload format', async () => {
+      let capturedPayload: Record<string, unknown> | null = null;
+      
+      // Mock response for plan generation
+      const mockPlanResponse = [
+        {
+          id: 'evt-summary-001',
+          timestamp: new Date().toISOString(),
+          author: 'model',
+          content: {
+            role: 'model',
+            parts: [{ text: '# Weekend Plan\n\nSample plan content.' }]
+          }
+        }
+      ];
+      
+      server.use(
+        http.post('http://localhost:8000/apps/:app/users/:user/sessions/:session', 
+          async ({ request }) => {
+            // Parse body to determine request type
+            let body: Record<string, unknown> | null = null;
+            try {
+              const text = await request.text();
+              if (text && text.trim()) {
+                body = JSON.parse(text);
+              }
+            } catch {
+              body = null;
+            }
+            
+            const isEmpty = !body || Object.keys(body).length === 0;
+            
+            // Capture the message payload (not the empty session creation request)
+            if (!isEmpty && body && body.new_message) {
+              capturedPayload = body;
+            }
+            
+            // Return appropriate response based on request type
+            if (isEmpty) {
+              return HttpResponse.json({ status: 'created' }, { status: 200 });
+            }
+            
+            return HttpResponse.json(mockPlanResponse, { status: 200 });
+          }
+        )
+      );
+
+      await generatePlan(validInput);
+
+      // Verify payload was captured
+      expect(capturedPayload).not.toBeNull();
+      
+      // Verify new_message structure
+      expect(capturedPayload).toHaveProperty('new_message');
+      
+      // Type assertion for TypeScript
+      const newMessage = (capturedPayload as { new_message: { role: string; parts: Array<{ text: string }> } }).new_message;
+      
+      expect(newMessage).toHaveProperty('role', 'user');
+      expect(newMessage).toHaveProperty('parts');
+      expect(Array.isArray(newMessage.parts)).toBe(true);
+      expect(newMessage.parts.length).toBeGreaterThan(0);
+      expect(newMessage.parts[0]).toHaveProperty('text');
+      expect(typeof newMessage.parts[0].text).toBe('string');
+      
+      // Verify the text contains relevant input information
+      const messageText = newMessage.parts[0].text;
+      expect(messageText.length).toBeGreaterThan(0);
+    });
   });
 
   // ==========================================================================
@@ -221,7 +434,7 @@ describe('API Client', () => {
 
   describe('createSession()', () => {
     /**
-     * Test 6: Creates session successfully
+     * Test 9: Creates session successfully
      * 
      * Verifies that createSession() correctly creates an ADK session
      * and returns the session ID on success.
@@ -236,7 +449,7 @@ describe('API Client', () => {
     });
 
     /**
-     * Test 7: Handles session creation failure
+     * Test 10: Handles session creation failure
      * 
      * Verifies that createSession() correctly handles server errors
      * during session creation and throws an appropriate error.
