@@ -68,7 +68,7 @@
   }
 
   a:hover {
-    color: #152a47; /* Darker blue on hover */
+    color: #163045; /* Darker blue on hover */
     text-decoration: underline;
   }
 
@@ -147,7 +147,7 @@
   }
 
   .btn-primary:hover:not(:disabled) {
-    background-color: #152a47;
+    background-color: #163045;
   }
 
   .btn-primary:active:not(:disabled) {
