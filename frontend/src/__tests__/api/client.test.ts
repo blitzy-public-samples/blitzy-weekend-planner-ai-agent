@@ -412,8 +412,8 @@ describe('API Client', () => {
       // Verify new_message structure
       expect(capturedPayload).toHaveProperty('new_message');
       
-      // Type assertion for TypeScript
-      const newMessage = (capturedPayload as { new_message: { role: string; parts: Array<{ text: string }> } }).new_message;
+      // Type assertion for TypeScript - cast via unknown since we've verified it's not null
+      const newMessage = (capturedPayload as unknown as { new_message: { role: string; parts: Array<{ text: string }> } }).new_message;
       
       expect(newMessage).toHaveProperty('role', 'user');
       expect(newMessage).toHaveProperty('parts');
