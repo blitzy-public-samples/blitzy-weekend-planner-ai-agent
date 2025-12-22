@@ -222,7 +222,7 @@ function App(): JSX.Element {
       <header className="py-6 px-4 md:px-8 border-b border-[#3D405B]/10">
         <div className="max-w-[1200px] mx-auto">
           {/* Main title with primary brand color - WCAG AA compliant */}
-          <h1 className="text-3xl font-bold text-primary">
+          <h1 className="text-3xl font-bold text-[#1e3a5f]">
             Weekend Planner
           </h1>
           {/* Subtitle with muted text */}
