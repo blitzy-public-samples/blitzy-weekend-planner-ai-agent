@@ -71,18 +71,17 @@ export async function createSession(
 
 /**
  * Builds the prompt string from input data.
- * @param input - The user's input data
- * @returns The formatted prompt string
+ * Creates a weekend plan request based on the user's Zip Code and optional kids ages.
+ * 
+ * @param input - The user's input data containing location (Zip Code) and optional kidsAges
+ * @returns The formatted prompt string for the AI agent
  */
 function buildPrompt(input: GeneratePlanInput): string {
-  let prompt = `Plan a weekend trip to ${input.location} from ${input.startDate} to ${input.endDate}.`;
+  let prompt = `Plan a weekend trip in the area of ${input.location}.`;
 
-  if (input.kidsAges && input.kidsAges.trim()) {
-    prompt += ` We have kids ages ${input.kidsAges}.`;
-  }
-
-  if (input.preferences && input.preferences.trim()) {
-    prompt += ` Preferences: ${input.preferences}`;
+  if (input.kidsAges && input.kidsAges.length > 0) {
+    const agesString = input.kidsAges.join(', ');
+    prompt += ` We have kids ages ${agesString}.`;
   }
 
   return prompt;
@@ -167,7 +166,11 @@ function extractPlanText(response: ADKResponse): string | undefined {
 
 /**
  * Generates a weekend plan using the ADK backend.
- * @param input - The user's input data for plan generation
+ * Implements a two-step session-based flow:
+ * 1. Create session with empty body: POST /apps/WeekendPlanner/users/{userId}/sessions/{sessionId}
+ * 2. Send message with new_message: POST to the same endpoint
+ * 
+ * @param input - The user's input data for plan generation (Zip Code and optional kids ages)
  * @param userId - The user ID (defaults to ui_user)
  * @param sessionId - The session ID (generated if not provided)
  * @returns Promise resolving to the plan result
@@ -178,21 +181,42 @@ export async function generatePlan(
   sessionId?: string
 ): Promise<GeneratePlanResult> {
   const sid = sessionId || generateSessionId();
-  const url = `${API_BASE_URL}/run`;
+  const url = `${API_BASE_URL}/apps/${APP_NAME}/users/${userId}/sessions/${sid}`;
 
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
 
   try {
+    // Step 1: Create session with empty body
+    const createResponse = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({}),
+      signal: controller.signal
+    });
+
+    if (!createResponse.ok) {
+      clearTimeout(timeoutId);
+      const errorBody = await createResponse.text().catch(() => '');
+      const error: PlanError = {
+        message: getErrorMessage(createResponse.status, errorBody),
+        statusCode: createResponse.status,
+        body: errorBody
+      };
+      return {
+        success: false,
+        error
+      };
+    }
+
+    // Step 2: Send message with new_message to the same endpoint
     const requestBody = {
-      app_name: APP_NAME,
-      user_id: userId,
-      session_id: sid,
       new_message: {
         role: 'user',
         parts: [{ text: buildPrompt(input) }]
-      },
-      streaming: false
+      }
     };
 
     const response = await fetch(url, {

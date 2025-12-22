@@ -3,17 +3,14 @@
  * 
  * React functional component implementing the user input form for Weekend Planner.
  * Contains controlled inputs for:
- * - Location (required) - city name or zip code
- * - Start date (required) - YYYY-MM-DD format
- * - End date (required with >= startDate validation)
- * - Kids ages (optional, comma-separated integers 1-18)
- * - Preferences (optional textarea for activity preferences)
+ * - Zip Code (required) - user's location for the weekend plan
+ * - Kids Ages (optional) - comma-separated integers with ages 0 < age < 120
  * 
  * Features:
  * - Form validation with inline error messages
- * - Generate Plan button disabled until required fields valid
+ * - Generate Plan button disabled until required Zip Code is valid
  * - Reset button to clear all fields
- * - Tailwind CSS styling with primary color #E07A5F for CTAs
+ * - Tailwind CSS styling with primary color #1e3a5f for CTAs (WCAG AA compliant)
  * - Proper ARIA attributes for accessibility (WCAG AA compliance)
  * 
  * @module components/InputForm
@@ -52,14 +49,39 @@ export interface InputFormProps {
  * Each property corresponds to a form field that can have validation errors.
  */
 interface FormErrors {
-  /** Validation error message for the location field */
+  /** Validation error message for the Zip Code (location) field */
   location?: string;
-  /** Validation error message for the start date field */
-  startDate?: string;
-  /** Validation error message for the end date field */
-  endDate?: string;
   /** Validation error message for the kids ages field */
   kidsAges?: string;
+}
+
+/**
+ * Parses a comma-separated string of kids ages into an array of numbers.
+ * Validates that each age is a valid integer where 0 < age < 120.
+ * 
+ * @param input - The raw string input from the form field
+ * @returns Array of parsed ages if valid, empty array if input is empty, null if invalid
+ * 
+ * @example
+ * parseKidsAges("5, 8, 12")  // returns [5, 8, 12]
+ * parseKidsAges("")          // returns []
+ * parseKidsAges("5, abc, 8") // returns null (invalid)
+ * parseKidsAges("0, 5, 120") // returns null (out of range)
+ */
+function parseKidsAges(input: string): number[] | null {
+  if (!input.trim()) return []; // Empty is valid (optional field)
+  
+  const ages = input.split(',').map(s => s.trim());
+  const result: number[] = [];
+  
+  for (const age of ages) {
+    const num = parseInt(age, 10);
+    if (isNaN(num) || age !== String(num) || num <= 0 || num >= 120) {
+      return null; // Invalid
+    }
+    result.push(num);
+  }
+  return result;
 }
 
 /**
@@ -67,6 +89,10 @@ interface FormErrors {
  * 
  * Provides a fully accessible form with validation for collecting
  * weekend trip planning details from the user.
+ * 
+ * Form contains exactly two fields:
+ * - Zip Code (required): User's location
+ * - Kids Ages (optional): Comma-separated ages (0 < age < 120)
  * 
  * @param props - Component props
  * @param props.onSubmit - Callback when form is submitted with valid data
@@ -86,10 +112,7 @@ interface FormErrors {
 export function InputForm({ onSubmit, onReset, isLoading = false }: InputFormProps): React.ReactElement {
   // Form field state management using controlled inputs
   const [location, setLocation] = useState<string>('');
-  const [startDate, setStartDate] = useState<string>('');
-  const [endDate, setEndDate] = useState<string>('');
   const [kidsAges, setKidsAges] = useState<string>('');
-  const [preferences, setPreferences] = useState<string>('');
   
   // Validation errors state
   const [errors, setErrors] = useState<FormErrors>({});
@@ -97,68 +120,40 @@ export function InputForm({ onSubmit, onReset, isLoading = false }: InputFormPro
   /**
    * Validates all form fields and returns an object containing any validation errors.
    * Checks:
-   * - Location is not empty
-   * - Start date is provided
-   * - End date is provided and >= start date
-   * - Kids ages (if provided) are valid comma-separated integers 1-18
+   * - Zip Code (location) is not empty
+   * - Kids ages (if provided) are valid comma-separated integers where 0 < age < 120
    * 
    * @returns Object containing validation error messages for invalid fields
    */
   const validateForm = useCallback((): FormErrors => {
     const newErrors: FormErrors = {};
 
-    // Validate location (required)
+    // Validate Zip Code (required)
     if (!location.trim()) {
-      newErrors.location = 'Location is required';
-    }
-
-    // Validate start date (required)
-    if (!startDate) {
-      newErrors.startDate = 'Start date is required';
-    }
-
-    // Validate end date (required)
-    if (!endDate) {
-      newErrors.endDate = 'End date is required';
-    } else if (startDate && endDate) {
-      // Check that end date is on or after start date
-      const start = new Date(startDate);
-      const end = new Date(endDate);
-      if (end < start) {
-        newErrors.endDate = 'End date must be on or after start date';
-      }
+      newErrors.location = 'Zip Code is required';
     }
 
     // Validate kids ages format if provided (optional field)
     if (kidsAges.trim()) {
-      const agesArray = kidsAges.split(',').map(age => age.trim());
-      const hasInvalidAge = agesArray.some(age => {
-        // Check if it's a valid integer
-        const num = parseInt(age, 10);
-        // Must be a number between 1 and 18 (inclusive)
-        return isNaN(num) || num < 1 || num > 18 || age !== String(num);
-      });
-      if (hasInvalidAge) {
-        newErrors.kidsAges = 'Enter ages as numbers separated by commas';
+      const parsedAges = parseKidsAges(kidsAges);
+      if (parsedAges === null) {
+        newErrors.kidsAges = 'Enter valid ages as numbers separated by commas (1-119)';
       }
     }
 
     return newErrors;
-  }, [location, startDate, endDate, kidsAges]);
+  }, [location, kidsAges]);
 
   /**
    * Checks if all required form fields have valid values.
    * Used to determine if the Generate Plan button should be enabled.
-   * Note: This only checks that required fields are filled, not full validation.
+   * Only Zip Code is required.
    * 
-   * @returns True if all required fields have values
+   * @returns True if the required Zip Code field has a value
    */
   const isFormValid = useCallback((): boolean => {
-    const hasLocation = location.trim() !== '';
-    const hasStartDate = startDate !== '';
-    const hasEndDate = endDate !== '';
-    return hasLocation && hasStartDate && hasEndDate;
-  }, [location, startDate, endDate]);
+    return location.trim() !== '';
+  }, [location]);
 
   /**
    * Handles form submission.
@@ -175,16 +170,16 @@ export function InputForm({ onSubmit, onReset, isLoading = false }: InputFormPro
 
     // Only submit if there are no validation errors
     if (Object.keys(validationErrors).length === 0) {
+      // Parse kids ages into number array (empty array if not provided)
+      const parsedAges = parseKidsAges(kidsAges);
+      
       const input: GeneratePlanInput = {
         location: location.trim(),
-        startDate: startDate,
-        endDate: endDate,
-        kidsAges: kidsAges.trim() || undefined,
-        preferences: preferences.trim() || undefined,
+        kidsAges: parsedAges || [], // Use empty array if null (shouldn't happen after validation)
       };
       onSubmit(input);
     }
-  }, [location, startDate, endDate, kidsAges, preferences, validateForm, onSubmit]);
+  }, [location, kidsAges, validateForm, onSubmit]);
 
   /**
    * Handles form reset.
@@ -193,10 +188,7 @@ export function InputForm({ onSubmit, onReset, isLoading = false }: InputFormPro
   const handleReset = useCallback((): void => {
     // Clear all form field state
     setLocation('');
-    setStartDate('');
-    setEndDate('');
     setKidsAges('');
-    setPreferences('');
     
     // Clear any validation errors
     setErrors({});
@@ -211,14 +203,14 @@ export function InputForm({ onSubmit, onReset, isLoading = false }: InputFormPro
    * 
    * @param field - The field name for error tracking
    * @param setter - The state setter function for the field
-   * @returns An event handler function for the input/textarea
+   * @returns An event handler function for the input
    */
   const createChangeHandler = useCallback(
-    (field: keyof FormErrors | null, setter: (value: string) => void) => 
-      (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>): void => {
+    (field: keyof FormErrors, setter: (value: string) => void) => 
+      (e: ChangeEvent<HTMLInputElement>): void => {
         setter(e.target.value);
         // Clear error for this field when user starts typing
-        if (field && errors[field]) {
+        if (errors[field]) {
           setErrors(prev => {
             const newErrors = { ...prev };
             delete newErrors[field];
@@ -239,13 +231,13 @@ export function InputForm({ onSubmit, onReset, isLoading = false }: InputFormPro
       noValidate
     >
       <div className="space-y-6">
-        {/* Location field (required) */}
+        {/* Zip Code field (required) */}
         <div>
           <label
             htmlFor="location"
             className="block text-[#3D405B] font-medium mb-1"
           >
-            Location <span className="text-[#E63946]" aria-hidden="true">*</span>
+            Zip Code <span className="text-[#E63946]" aria-hidden="true">*</span>
           </label>
           <input
             type="text"
@@ -253,8 +245,8 @@ export function InputForm({ onSubmit, onReset, isLoading = false }: InputFormPro
             name="location"
             value={location}
             onChange={createChangeHandler('location', setLocation)}
-            placeholder="Enter city or zip code"
-            className={`w-full border rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-[#E07A5F] ${
+            placeholder="Enter zip code (e.g., 94105)"
+            className={`w-full border rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-[#1e3a5f] ${
               errors.location ? 'border-[#E63946]' : 'border-gray-300'
             }`}
             aria-required="true"
@@ -274,78 +266,6 @@ export function InputForm({ onSubmit, onReset, isLoading = false }: InputFormPro
           )}
         </div>
 
-        {/* Date fields row */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {/* Start date field (required) */}
-          <div>
-            <label
-              htmlFor="startDate"
-              className="block text-[#3D405B] font-medium mb-1"
-            >
-              Start Date <span className="text-[#E63946]" aria-hidden="true">*</span>
-            </label>
-            <input
-              type="date"
-              id="startDate"
-              name="startDate"
-              value={startDate}
-              onChange={createChangeHandler('startDate', setStartDate)}
-              className={`w-full border rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-[#E07A5F] ${
-                errors.startDate ? 'border-[#E63946]' : 'border-gray-300'
-              }`}
-              aria-required="true"
-              aria-invalid={errors.startDate ? 'true' : 'false'}
-              aria-describedby={errors.startDate ? 'startDate-error' : undefined}
-              disabled={isLoading}
-            />
-            {errors.startDate && (
-              <p
-                id="startDate-error"
-                className="text-[#E63946] text-sm mt-1"
-                role="alert"
-                aria-live="polite"
-              >
-                {errors.startDate}
-              </p>
-            )}
-          </div>
-
-          {/* End date field (required, must be >= start date) */}
-          <div>
-            <label
-              htmlFor="endDate"
-              className="block text-[#3D405B] font-medium mb-1"
-            >
-              End Date <span className="text-[#E63946]" aria-hidden="true">*</span>
-            </label>
-            <input
-              type="date"
-              id="endDate"
-              name="endDate"
-              value={endDate}
-              onChange={createChangeHandler('endDate', setEndDate)}
-              min={startDate}
-              className={`w-full border rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-[#E07A5F] ${
-                errors.endDate ? 'border-[#E63946]' : 'border-gray-300'
-              }`}
-              aria-required="true"
-              aria-invalid={errors.endDate ? 'true' : 'false'}
-              aria-describedby={errors.endDate ? 'endDate-error' : undefined}
-              disabled={isLoading}
-            />
-            {errors.endDate && (
-              <p
-                id="endDate-error"
-                className="text-[#E63946] text-sm mt-1"
-                role="alert"
-                aria-live="polite"
-              >
-                {errors.endDate}
-              </p>
-            )}
-          </div>
-        </div>
-
         {/* Kids ages field (optional) */}
         <div>
           <label
@@ -360,8 +280,8 @@ export function InputForm({ onSubmit, onReset, isLoading = false }: InputFormPro
             name="kidsAges"
             value={kidsAges}
             onChange={createChangeHandler('kidsAges', setKidsAges)}
-            placeholder="e.g., 3, 7, 12"
-            className={`w-full border rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-[#E07A5F] ${
+            placeholder="e.g., 5, 8, 12"
+            className={`w-full border rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-[#1e3a5f] ${
               errors.kidsAges ? 'border-[#E63946]' : 'border-gray-300'
             }`}
             aria-invalid={errors.kidsAges ? 'true' : 'false'}
@@ -369,7 +289,7 @@ export function InputForm({ onSubmit, onReset, isLoading = false }: InputFormPro
             disabled={isLoading}
           />
           <p id="kidsAges-hint" className="text-gray-500 text-sm mt-1">
-            Enter ages separated by commas (1-18)
+            Enter ages separated by commas (valid range: 1-119)
           </p>
           {errors.kidsAges && (
             <p
@@ -383,39 +303,15 @@ export function InputForm({ onSubmit, onReset, isLoading = false }: InputFormPro
           )}
         </div>
 
-        {/* Preferences field (optional) */}
-        <div>
-          <label
-            htmlFor="preferences"
-            className="block text-[#3D405B] font-medium mb-1"
-          >
-            Preferences <span className="text-gray-500 font-normal">(optional)</span>
-          </label>
-          <textarea
-            id="preferences"
-            name="preferences"
-            value={preferences}
-            onChange={createChangeHandler(null, setPreferences)}
-            placeholder="e.g., outdoor activities, avoid crowds"
-            rows={3}
-            className="w-full border border-gray-300 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-[#E07A5F] resize-none"
-            aria-describedby="preferences-hint"
-            disabled={isLoading}
-          />
-          <p id="preferences-hint" className="text-gray-500 text-sm mt-1">
-            Describe your activity preferences or constraints
-          </p>
-        </div>
-
         {/* Action buttons */}
         <div className="flex flex-col sm:flex-row gap-4 pt-2">
           {/* Primary CTA: Generate Plan */}
           <button
             type="submit"
             disabled={!canSubmit}
-            className={`flex-1 bg-[#E07A5F] text-white rounded-xl px-6 py-3 font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-[#E07A5F] focus:ring-offset-2 ${
+            className={`flex-1 bg-[#1e3a5f] text-white rounded-xl px-6 py-3 font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-[#1e3a5f] focus:ring-offset-2 ${
               canSubmit
-                ? 'hover:bg-[#d46a4f] cursor-pointer'
+                ? 'hover:bg-[#163045] cursor-pointer'
                 : 'opacity-50 cursor-not-allowed'
             }`}
             aria-disabled={!canSubmit}

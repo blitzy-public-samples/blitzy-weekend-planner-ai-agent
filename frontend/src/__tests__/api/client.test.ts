@@ -34,13 +34,14 @@ import type { GeneratePlanInput } from '../../types';
 /**
  * Sample GeneratePlanInput with all fields populated.
  * Used for testing the standard success path.
+ * 
+ * The form now contains only two fields:
+ * - location (Zip Code): Required string
+ * - kidsAges: Array of integers where 0 < age < 120
  */
 const validInput: GeneratePlanInput = {
-  location: 'San Francisco',
-  startDate: '2024-01-15',
-  endDate: '2024-01-16',
-  kidsAges: '5, 8',
-  preferences: 'outdoor activities, avoid crowds'
+  location: '94105',
+  kidsAges: [5, 8]
 };
 
 // ============================================================================
@@ -121,11 +122,14 @@ describe('API Client', () => {
      * 
      * Verifies that generatePlan() correctly handles 400 status responses
      * and extracts error details from the response body.
+     * 
+     * The two-step session flow uses the session endpoint for both operations.
      */
     it('handles 400 Bad Request with structured error', async () => {
       // Set up handler to return 400 Bad Request with error details
+      // The session endpoint is used for both session creation and message sending
       server.use(
-        http.post('http://localhost:8000/run', () => {
+        http.post('http://localhost:8000/apps/:app/users/:user/sessions/:session', () => {
           return HttpResponse.json(
             { error: 'Invalid input' },
             { status: 400 }
