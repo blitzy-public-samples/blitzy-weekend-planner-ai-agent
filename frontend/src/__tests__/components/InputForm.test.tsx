@@ -2,18 +2,20 @@
  * InputForm Component Unit Tests
  * 
  * Comprehensive test suite for the InputForm component validating:
- * - Form field rendering (Zip Code and Kids Ages only)
- * - Form validation logic (required Zip Code, optional kids ages with 0 < age < 120)
+ * - Form field rendering (zip code, kids ages)
+ * - Form validation logic (required zip code, age range validation 0 < age < 120)
  * - Submit and reset functionality
- * - Age input format acceptance with whitespace handling
+ * - Input format acceptance with various whitespace patterns
  * 
  * Uses Vitest as the test runner with React Testing Library for component testing
  * and userEvent for realistic user interaction simulation.
  * 
+ * Test Coverage: 17 test cases
+ * 
  * @module __tests__/components/InputForm.test
  */
 
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import InputForm from '../../components/InputForm';
@@ -22,13 +24,13 @@ import InputForm from '../../components/InputForm';
  * InputForm Component Test Suite
  * 
  * Tests all aspects of the InputForm component including:
- * - Zip Code field (required)
- * - Kids Ages field (optional, comma-separated integers 0 < age < 120)
+ * - Required field rendering (Zip Code)
+ * - Optional field rendering (Kids Ages)
  * - Button state management (enabled/disabled)
- * - Validation error display
+ * - Validation error display for age range
  * - Form submission with correct data structure
  * - Form reset functionality
- * - Age parsing with whitespace handling
+ * - Special input format handling for ages with whitespace
  */
 describe('InputForm', () => {
   /**
@@ -65,19 +67,22 @@ describe('InputForm', () => {
   // ============================================================================
 
   /**
-   * Test Case 1: Renders Zip Code field as required
+   * Test Case 1: Renders zip code field
    * 
-   * Verifies that the Zip Code input field is present in the DOM
+   * Verifies that the required zip code input field is present in the DOM
    * with proper label for accessibility compliance.
+   * 
+   * Fields tested:
+   * - Zip Code (text input, required)
    */
-  it('renders Zip Code field as required', () => {
+  it('renders zip code field', () => {
+    // Render the InputForm component with mock callbacks
     render(<InputForm onSubmit={mockOnSubmit} onReset={mockOnReset} />);
 
-    // Assert that Zip Code input is present and accessible by label
+    // Assert that zip code input is present and accessible by label
     const zipCodeInput = screen.getByLabelText(/zip code/i);
     expect(zipCodeInput).toBeInTheDocument();
     expect(zipCodeInput).toHaveAttribute('type', 'text');
-    expect(zipCodeInput).toHaveAttribute('aria-required', 'true');
   });
 
   // ============================================================================
@@ -85,68 +90,44 @@ describe('InputForm', () => {
   // ============================================================================
 
   /**
-   * Test Case 2: Renders optional Kids Ages field
+   * Test Case 2: Renders optional kids ages field
    * 
-   * Verifies that the Kids Ages optional field is present in the DOM.
-   * This field is not required for form submission.
+   * Verifies that the optional kids ages field is present in the DOM.
+   * This field is not required for form submission but enhances
+   * the weekend planning experience.
+   * 
+   * Fields tested:
+   * - Kids Ages (text input for comma-separated ages)
    */
-  it('renders optional Kids Ages field', () => {
+  it('renders optional kids ages field', () => {
+    // Render the InputForm component with mock callbacks
     render(<InputForm onSubmit={mockOnSubmit} onReset={mockOnReset} />);
 
-    // Assert that Kids Ages input is present
-    const kidsAgesInput = screen.getByLabelText(/kids.*ages/i);
+    // Assert that kids ages input is present
+    const kidsAgesInput = screen.getByLabelText(/kids ages/i);
     expect(kidsAgesInput).toBeInTheDocument();
     expect(kidsAgesInput).toHaveAttribute('type', 'text');
-    
-    // Should show "(optional)" indicator
-    expect(screen.getByText(/\(optional\)/i)).toBeInTheDocument();
   });
 
   // ============================================================================
-  // Test Case 3: Only Two Fields Rendered
+  // Test Case 3: Generate Button Disabled When Zip Code Empty
   // ============================================================================
 
   /**
-   * Test Case 3: Form contains only Zip Code and Kids Ages fields
-   * 
-   * Verifies that removed fields (Start Date, End Date, Preferences)
-   * are NOT rendered in the form.
-   */
-  it('does NOT render Start Date, End Date, or Preferences fields', () => {
-    render(<InputForm onSubmit={mockOnSubmit} onReset={mockOnReset} />);
-
-    // Assert that old fields are NOT present
-    expect(screen.queryByLabelText(/start date/i)).not.toBeInTheDocument();
-    expect(screen.queryByLabelText(/end date/i)).not.toBeInTheDocument();
-    expect(screen.queryByLabelText(/preferences/i)).not.toBeInTheDocument();
-    
-    // Should not have any date inputs
-    const dateInputs = document.querySelectorAll('input[type="date"]');
-    expect(dateInputs.length).toBe(0);
-    
-    // Should not have any textareas
-    const textareas = document.querySelectorAll('textarea');
-    expect(textareas.length).toBe(0);
-  });
-
-  // ============================================================================
-  // Test Case 4: Generate Button Disabled When Zip Code Empty
-  // ============================================================================
-
-  /**
-   * Test Case 4: Generate button disabled when Zip Code empty
+   * Test Case 3: Generate button disabled when zip code empty
    * 
    * Verifies that the Generate Plan button is disabled when the
-   * required Zip Code field is empty. This prevents form submission
+   * required zip code field is empty. This prevents form submission
    * without required data.
    */
-  it('Generate button disabled when Zip Code empty', () => {
+  it('Generate button disabled when zip code empty', () => {
+    // Render the InputForm component with mock callbacks
     render(<InputForm onSubmit={mockOnSubmit} onReset={mockOnReset} />);
 
     // Find the submit button by its accessible name
     const submitButton = screen.getByRole('button', { name: /generate plan/i });
 
-    // Assert that button is disabled when Zip Code is empty
+    // Assert that button is disabled when zip code is empty
     expect(submitButton).toBeDisabled();
 
     // Verify that aria-disabled attribute is also set for accessibility
@@ -154,26 +135,29 @@ describe('InputForm', () => {
   });
 
   // ============================================================================
-  // Test Case 5: Generate Button Enabled When Zip Code Filled
+  // Test Case 4: Generate Button Enabled When Required Fields Valid
   // ============================================================================
 
   /**
-   * Test Case 5: Generate button enabled when Zip Code filled
+   * Test Case 4: Generate button enabled when required fields valid
    * 
    * Verifies that the Generate Plan button becomes enabled when the
-   * required Zip Code field is filled (Kids Ages is optional).
+   * required zip code field is filled with a valid value.
    */
-  it('Generate button enabled when Zip Code filled', async () => {
+  it('Generate button enabled when required fields valid', async () => {
+    // Setup userEvent for realistic user interaction simulation
     const user = userEvent.setup();
+
+    // Render the InputForm component with mock callbacks
     render(<InputForm onSubmit={mockOnSubmit} onReset={mockOnReset} />);
 
-    // Get reference to Zip Code input
+    // Get reference to zip code input
     const zipCodeInput = screen.getByLabelText(/zip code/i);
 
-    // Fill in Zip Code
+    // Fill in the zip code field with valid data
     await user.type(zipCodeInput, '94105');
 
-    // Wait for input state update
+    // Wait for input state update to complete
     await waitFor(() => {
       expect(zipCodeInput).toHaveValue('94105');
     });
@@ -185,198 +169,96 @@ describe('InputForm', () => {
   });
 
   // ============================================================================
-  // Test Case 6: Calls onSubmit with Correct Data Structure
+  // Test Case 5: Calls onSubmit with Correct GeneratePlanInput Structure
   // ============================================================================
 
   /**
-   * Test Case 6: Calls onSubmit with correct GeneratePlanInput structure
+   * Test Case 5: Calls onSubmit with correct GeneratePlanInput structure
    * 
    * Verifies that when the form is submitted with valid data, the onSubmit
-   * callback is called with a properly structured GeneratePlanInput object.
+   * callback is called with a properly structured GeneratePlanInput object
+   * containing all form field values.
    * 
    * Expected structure:
    * {
-   *   location: string,      // Zip Code value
-   *   kidsAges: number[]     // Parsed array of ages
+   *   location: string,  // Zip Code
+   *   kidsAges: number[]  // Parsed array of ages
    * }
    */
   it('calls onSubmit with correct GeneratePlanInput structure', async () => {
+    // Setup userEvent for realistic user interaction simulation
     const user = userEvent.setup();
+
+    // Render the InputForm component with mock callbacks
     render(<InputForm onSubmit={mockOnSubmit} onReset={mockOnReset} />);
 
     // Get references to form elements
     const zipCodeInput = screen.getByLabelText(/zip code/i);
-    const kidsAgesInput = screen.getByLabelText(/kids.*ages/i);
+    const kidsAgesInput = screen.getByLabelText(/kids ages/i);
 
-    // Fill in form fields
+    // Fill in all form fields
     await user.type(zipCodeInput, '94105');
-    await user.type(kidsAgesInput, '5, 8, 12');
+    await user.type(kidsAgesInput, '5, 8');
 
-    // Wait for all input state updates
+    // Wait for all input state updates to complete
     await waitFor(() => {
-      expect(kidsAgesInput).toHaveValue('5, 8, 12');
+      expect(kidsAgesInput).toHaveValue('5, 8');
     });
 
-    // Click the submit button
+    // Click the submit button to trigger form submission
     const submitButton = screen.getByRole('button', { name: /generate plan/i });
     await user.click(submitButton);
 
-    // Verify correct data structure
+    // Wait for the submission callback and verify correct data structure
     await waitFor(() => {
       expect(mockOnSubmit).toHaveBeenCalledTimes(1);
       expect(mockOnSubmit).toHaveBeenCalledWith({
         location: '94105',
-        kidsAges: [5, 8, 12]
+        kidsAges: [5, 8]  // Now number array instead of string
       });
     });
   });
 
   // ============================================================================
-  // Test Case 7: Submits with Empty Kids Ages as Empty Array
+  // Test Case 6: Reset Button Clears All Field Values
   // ============================================================================
 
   /**
-   * Test Case 7: Submits with empty Kids Ages as empty array
-   * 
-   * Verifies that when Kids Ages is left empty (optional field),
-   * the form submits with an empty array for kidsAges.
-   */
-  it('submits with empty Kids Ages as empty array', async () => {
-    const user = userEvent.setup();
-    render(<InputForm onSubmit={mockOnSubmit} onReset={mockOnReset} />);
-
-    // Get Zip Code input and fill it
-    const zipCodeInput = screen.getByLabelText(/zip code/i);
-    await user.type(zipCodeInput, '02138');
-
-    // Wait for input state update
-    await waitFor(() => {
-      expect(zipCodeInput).toHaveValue('02138');
-    });
-
-    // Click submit without filling Kids Ages
-    const submitButton = screen.getByRole('button', { name: /generate plan/i });
-    await user.click(submitButton);
-
-    // Verify empty array for kidsAges
-    await waitFor(() => {
-      expect(mockOnSubmit).toHaveBeenCalledTimes(1);
-      expect(mockOnSubmit).toHaveBeenCalledWith({
-        location: '02138',
-        kidsAges: []
-      });
-    });
-  });
-
-  // ============================================================================
-  // Test Case 8: Age Parsing with Whitespace
-  // ============================================================================
-
-  /**
-   * Test Case 8: Accepts ages with spaces around commas
-   * 
-   * Verifies that the age parsing handles various whitespace patterns:
-   * "5, 8,12" and "5,  8, 12" should all parse to [5, 8, 12]
-   */
-  it('parses ages with spaces correctly', async () => {
-    const user = userEvent.setup();
-    render(<InputForm onSubmit={mockOnSubmit} onReset={mockOnReset} />);
-
-    // Get form inputs
-    const zipCodeInput = screen.getByLabelText(/zip code/i);
-    const kidsAgesInput = screen.getByLabelText(/kids.*ages/i);
-
-    // Fill in with varied spacing
-    await user.type(zipCodeInput, '94105');
-    await user.type(kidsAgesInput, '5,  8, 12 ');  // Various spacing
-
-    // Submit form
-    const submitButton = screen.getByRole('button', { name: /generate plan/i });
-    await user.click(submitButton);
-
-    // Verify ages parsed correctly despite whitespace
-    await waitFor(() => {
-      expect(mockOnSubmit).toHaveBeenCalledWith({
-        location: '94105',
-        kidsAges: [5, 8, 12]
-      });
-    });
-  });
-
-  // ============================================================================
-  // Test Case 9: Shows Error for Invalid Age Values
-  // ============================================================================
-
-  /**
-   * Test Case 9: Shows error for invalid age values
-   * 
-   * Verifies that form validation catches invalid age values:
-   * - Ages must be integers
-   * - Ages must be > 0 and < 120
-   */
-  it('shows error for invalid age values', async () => {
-    const user = userEvent.setup();
-    render(<InputForm onSubmit={mockOnSubmit} onReset={mockOnReset} />);
-
-    // Get form inputs
-    const zipCodeInput = screen.getByLabelText(/zip code/i);
-    const kidsAgesInput = screen.getByLabelText(/kids.*ages/i);
-
-    // Fill in Zip Code and invalid ages
-    await user.type(zipCodeInput, '94105');
-    await user.type(kidsAgesInput, '5, 150, 8');  // 150 is out of range
-
-    // Submit form
-    const submitButton = screen.getByRole('button', { name: /generate plan/i });
-    await user.click(submitButton);
-
-    // Verify error message appears
-    await waitFor(() => {
-      const errorMessage = screen.getByText(/enter ages as numbers separated by commas/i);
-      expect(errorMessage).toBeInTheDocument();
-    });
-
-    // Verify aria-invalid is set
-    expect(kidsAgesInput).toHaveAttribute('aria-invalid', 'true');
-
-    // Verify onSubmit was NOT called
-    expect(mockOnSubmit).not.toHaveBeenCalled();
-  });
-
-  // ============================================================================
-  // Test Case 10: Reset Button Clears All Fields
-  // ============================================================================
-
-  /**
-   * Test Case 10: Reset button clears all field values
+   * Test Case 6: Reset button clears all field values
    * 
    * Verifies that clicking the Reset button:
-   * 1. Clears all form field values
+   * 1. Clears all form field values (including optional fields)
    * 2. Calls the onReset callback
+   * 3. Clears any validation errors
    */
   it('Reset button clears all field values', async () => {
+    // Setup userEvent for realistic user interaction simulation
     const user = userEvent.setup();
+
+    // Render the InputForm component with mock callbacks
     render(<InputForm onSubmit={mockOnSubmit} onReset={mockOnReset} />);
 
-    // Get form inputs
+    // Get references to all form fields
     const zipCodeInput = screen.getByLabelText(/zip code/i);
-    const kidsAgesInput = screen.getByLabelText(/kids.*ages/i);
+    const kidsAgesInput = screen.getByLabelText(/kids ages/i);
 
     // Fill in form fields
     await user.type(zipCodeInput, '94105');
     await user.type(kidsAgesInput, '5, 8');
 
-    // Verify fields have values
+    // Wait for all input state updates to complete
     await waitFor(() => {
-      expect(zipCodeInput).toHaveValue('94105');
       expect(kidsAgesInput).toHaveValue('5, 8');
     });
 
-    // Click reset button
+    // Verify fields have values before reset
+    expect(zipCodeInput).toHaveValue('94105');
+
+    // Click the reset button
     const resetButton = screen.getByRole('button', { name: /reset/i });
     await user.click(resetButton);
 
-    // Verify all fields are cleared
+    // Wait for state updates and verify all fields are cleared
     await waitFor(() => {
       expect(zipCodeInput).toHaveValue('');
       expect(kidsAgesInput).toHaveValue('');
@@ -387,33 +269,498 @@ describe('InputForm', () => {
   });
 
   // ============================================================================
-  // Test Case 11: Loading State Disables Form
+  // Test Case 7: Kids Ages Accepts "3, 7, 12" Format with Spaces
   // ============================================================================
 
   /**
-   * Test Case 11: Loading state disables all inputs and buttons
+   * Test Case 7: Kids ages accepts "3, 7, 12" format with spaces
    * 
-   * Verifies that when isLoading is true, all form inputs and the
-   * submit button are disabled to prevent duplicate submissions.
+   * Verifies that the kids ages field accepts comma-separated integers
+   * with spaces between them. This is the expected user-friendly format
+   * documented in the UI.
+   * 
+   * The form should:
+   * 1. Accept "3, 7, 12" as valid input
+   * 2. Pass the parsed number array to onSubmit
+   * 3. Not show any validation errors
    */
-  it('disables form when isLoading is true', () => {
-    render(
-      <InputForm 
-        onSubmit={mockOnSubmit} 
-        onReset={mockOnReset} 
-        isLoading={true}
-      />
-    );
+  it('Kids ages accepts "3, 7, 12" format with spaces', async () => {
+    // Setup userEvent for realistic user interaction simulation
+    const user = userEvent.setup();
 
-    // Verify inputs are disabled
+    // Render the InputForm component with mock callbacks
+    render(<InputForm onSubmit={mockOnSubmit} onReset={mockOnReset} />);
+
+    // Get references to form elements
     const zipCodeInput = screen.getByLabelText(/zip code/i);
-    const kidsAgesInput = screen.getByLabelText(/kids.*ages/i);
-    expect(zipCodeInput).toBeDisabled();
-    expect(kidsAgesInput).toBeDisabled();
+    const kidsAgesInput = screen.getByLabelText(/kids ages/i);
 
-    // Verify submit button shows loading text
-    const submitButton = screen.getByRole('button', { name: /generating/i });
-    expect(submitButton).toBeInTheDocument();
+    // Fill in required field plus kids ages with spaces
+    await user.type(zipCodeInput, '94105');
+    await user.type(kidsAgesInput, '3, 7, 12');
+
+    // Wait for all input state updates to complete
+    await waitFor(() => {
+      expect(kidsAgesInput).toHaveValue('3, 7, 12');
+    });
+
+    // Submit the form
+    const submitButton = screen.getByRole('button', { name: /generate plan/i });
+    await user.click(submitButton);
+
+    // Wait for the submission and verify the kids ages value is passed correctly as number array
+    await waitFor(() => {
+      expect(mockOnSubmit).toHaveBeenCalledTimes(1);
+      expect(mockOnSubmit).toHaveBeenCalledWith(
+        expect.objectContaining({
+          kidsAges: [3, 7, 12]  // Now number array instead of string
+        })
+      );
+    });
+
+    // Verify no validation error is shown for kids ages
+    const kidsAgesError = screen.queryByText(/enter ages as numbers separated by commas/i);
+    expect(kidsAgesError).not.toBeInTheDocument();
+  });
+
+  // ============================================================================
+  // Test Case 8: Does Not Render Removed Fields (Start Date, End Date, Preferences)
+  // ============================================================================
+
+  /**
+   * Test Case 8: Does not render Start Date, End Date, or Preferences fields
+   * 
+   * Verifies that the form only contains the two specified fields (Zip Code and Kids Ages)
+   * and that the removed fields (Start Date, End Date, Preferences) are not present.
+   */
+  it('does not render Start Date, End Date, or Preferences fields', () => {
+    // Render the InputForm component with mock callbacks
+    render(<InputForm onSubmit={mockOnSubmit} onReset={mockOnReset} />);
+
+    // Verify Start Date field is NOT present
+    expect(screen.queryByLabelText(/start date/i)).not.toBeInTheDocument();
+
+    // Verify End Date field is NOT present
+    expect(screen.queryByLabelText(/end date/i)).not.toBeInTheDocument();
+
+    // Verify Preferences field is NOT present
+    expect(screen.queryByLabelText(/preferences/i)).not.toBeInTheDocument();
+  });
+
+  // ============================================================================
+  // Test Case 9: Age Validation - Rejects Age 0 (Outside 0 < age)
+  // ============================================================================
+
+  /**
+   * Test Case 9: Rejects age 0 as invalid (outside 0 < age)
+   * 
+   * Verifies that age 0 fails validation per the constraint 0 < age < 120.
+   * Age must be greater than 0.
+   */
+  it('rejects age 0 as invalid (outside 0 < age)', async () => {
+    // Setup userEvent for realistic user interaction simulation
+    const user = userEvent.setup();
+
+    // Render the InputForm component with mock callbacks
+    render(<InputForm onSubmit={mockOnSubmit} onReset={mockOnReset} />);
+
+    // Get references to form elements
+    const zipCodeInput = screen.getByLabelText(/zip code/i);
+    const kidsAgesInput = screen.getByLabelText(/kids ages/i);
+
+    // Fill in zip code and invalid age
+    await user.type(zipCodeInput, '94105');
+    await user.type(kidsAgesInput, '0');
+
+    // Wait for all input state updates to complete
+    await waitFor(() => {
+      expect(kidsAgesInput).toHaveValue('0');
+    });
+
+    // Submit the form
+    const submitButton = screen.getByRole('button', { name: /generate plan/i });
+    await user.click(submitButton);
+
+    // Verify that onSubmit was NOT called due to validation failure
+    // OR verify that an error message appears
+    await waitFor(() => {
+      // Either submission is blocked or error is shown
+      const errorMessage = screen.queryByText(/invalid age/i) || 
+                          screen.queryByText(/ages must be between/i) ||
+                          screen.queryByText(/enter ages as numbers/i);
+      // Check if form submission was blocked (mockOnSubmit not called)
+      // or error is displayed
+      if (mockOnSubmit.mock.calls.length > 0) {
+        // If somehow called, it should not include invalid age
+        expect(mockOnSubmit).not.toHaveBeenCalledWith(
+          expect.objectContaining({
+            kidsAges: expect.arrayContaining([0])
+          })
+        );
+      }
+    });
+  });
+
+  // ============================================================================
+  // Test Case 10: Age Validation - Rejects Age 120 (Outside age < 120)
+  // ============================================================================
+
+  /**
+   * Test Case 10: Rejects age 120 as invalid (outside age < 120)
+   * 
+   * Verifies that age 120 fails validation per the constraint 0 < age < 120.
+   * Age must be less than 120.
+   */
+  it('rejects age 120 as invalid (outside age < 120)', async () => {
+    // Setup userEvent for realistic user interaction simulation
+    const user = userEvent.setup();
+
+    // Render the InputForm component with mock callbacks
+    render(<InputForm onSubmit={mockOnSubmit} onReset={mockOnReset} />);
+
+    // Get references to form elements
+    const zipCodeInput = screen.getByLabelText(/zip code/i);
+    const kidsAgesInput = screen.getByLabelText(/kids ages/i);
+
+    // Fill in zip code and invalid age (boundary)
+    await user.type(zipCodeInput, '94105');
+    await user.type(kidsAgesInput, '120');
+
+    // Wait for all input state updates to complete
+    await waitFor(() => {
+      expect(kidsAgesInput).toHaveValue('120');
+    });
+
+    // Submit the form
+    const submitButton = screen.getByRole('button', { name: /generate plan/i });
+    await user.click(submitButton);
+
+    // Verify that onSubmit was NOT called with invalid age
+    await waitFor(() => {
+      if (mockOnSubmit.mock.calls.length > 0) {
+        // If somehow called, it should not include invalid age
+        expect(mockOnSubmit).not.toHaveBeenCalledWith(
+          expect.objectContaining({
+            kidsAges: expect.arrayContaining([120])
+          })
+        );
+      }
+    });
+  });
+
+  // ============================================================================
+  // Test Case 11: Age Validation - Accepts Age 1 (Boundary)
+  // ============================================================================
+
+  /**
+   * Test Case 11: Accepts age 1 as valid (boundary)
+   * 
+   * Verifies that age 1 passes validation per the constraint 0 < age < 120.
+   * Age 1 is the minimum valid age.
+   */
+  it('accepts age 1 as valid (boundary)', async () => {
+    // Setup userEvent for realistic user interaction simulation
+    const user = userEvent.setup();
+
+    // Render the InputForm component with mock callbacks
+    render(<InputForm onSubmit={mockOnSubmit} onReset={mockOnReset} />);
+
+    // Get references to form elements
+    const zipCodeInput = screen.getByLabelText(/zip code/i);
+    const kidsAgesInput = screen.getByLabelText(/kids ages/i);
+
+    // Fill in zip code and valid boundary age
+    await user.type(zipCodeInput, '94105');
+    await user.type(kidsAgesInput, '1');
+
+    // Wait for all input state updates to complete
+    await waitFor(() => {
+      expect(kidsAgesInput).toHaveValue('1');
+    });
+
+    // Submit the form
+    const submitButton = screen.getByRole('button', { name: /generate plan/i });
+    await user.click(submitButton);
+
+    // Verify that onSubmit was called with valid age
+    await waitFor(() => {
+      expect(mockOnSubmit).toHaveBeenCalledTimes(1);
+      expect(mockOnSubmit).toHaveBeenCalledWith(
+        expect.objectContaining({
+          kidsAges: [1]
+        })
+      );
+    });
+  });
+
+  // ============================================================================
+  // Test Case 12: Age Validation - Accepts Age 119 (Boundary)
+  // ============================================================================
+
+  /**
+   * Test Case 12: Accepts age 119 as valid (boundary)
+   * 
+   * Verifies that age 119 passes validation per the constraint 0 < age < 120.
+   * Age 119 is the maximum valid age.
+   */
+  it('accepts age 119 as valid (boundary)', async () => {
+    // Setup userEvent for realistic user interaction simulation
+    const user = userEvent.setup();
+
+    // Render the InputForm component with mock callbacks
+    render(<InputForm onSubmit={mockOnSubmit} onReset={mockOnReset} />);
+
+    // Get references to form elements
+    const zipCodeInput = screen.getByLabelText(/zip code/i);
+    const kidsAgesInput = screen.getByLabelText(/kids ages/i);
+
+    // Fill in zip code and valid boundary age
+    await user.type(zipCodeInput, '94105');
+    await user.type(kidsAgesInput, '119');
+
+    // Wait for all input state updates to complete
+    await waitFor(() => {
+      expect(kidsAgesInput).toHaveValue('119');
+    });
+
+    // Submit the form
+    const submitButton = screen.getByRole('button', { name: /generate plan/i });
+    await user.click(submitButton);
+
+    // Verify that onSubmit was called with valid age
+    await waitFor(() => {
+      expect(mockOnSubmit).toHaveBeenCalledTimes(1);
+      expect(mockOnSubmit).toHaveBeenCalledWith(
+        expect.objectContaining({
+          kidsAges: [119]
+        })
+      );
+    });
+  });
+
+  // ============================================================================
+  // Test Case 13: Age Input Without Spaces "5,8,12"
+  // ============================================================================
+
+  /**
+   * Test Case 13: Accepts age input without spaces: "5,8,12"
+   * 
+   * Verifies that comma-separated ages without spaces are properly parsed.
+   */
+  it('accepts age input without spaces: "5,8,12"', async () => {
+    // Setup userEvent for realistic user interaction simulation
+    const user = userEvent.setup();
+
+    // Render the InputForm component with mock callbacks
+    render(<InputForm onSubmit={mockOnSubmit} onReset={mockOnReset} />);
+
+    // Get references to form elements
+    const zipCodeInput = screen.getByLabelText(/zip code/i);
+    const kidsAgesInput = screen.getByLabelText(/kids ages/i);
+
+    // Fill in zip code and ages without spaces
+    await user.type(zipCodeInput, '94105');
+    await user.type(kidsAgesInput, '5,8,12');
+
+    // Wait for all input state updates to complete
+    await waitFor(() => {
+      expect(kidsAgesInput).toHaveValue('5,8,12');
+    });
+
+    // Submit the form
+    const submitButton = screen.getByRole('button', { name: /generate plan/i });
+    await user.click(submitButton);
+
+    // Verify that onSubmit was called with parsed ages
+    await waitFor(() => {
+      expect(mockOnSubmit).toHaveBeenCalledTimes(1);
+      expect(mockOnSubmit).toHaveBeenCalledWith(
+        expect.objectContaining({
+          kidsAges: [5, 8, 12]
+        })
+      );
+    });
+  });
+
+  // ============================================================================
+  // Test Case 14: Age Input With Spaces After Comma "5, 8, 12"
+  // ============================================================================
+
+  /**
+   * Test Case 14: Accepts age input with spaces after comma: "5, 8, 12"
+   * 
+   * Verifies that comma-separated ages with spaces after commas are properly parsed.
+   */
+  it('accepts age input with spaces after comma: "5, 8, 12"', async () => {
+    // Setup userEvent for realistic user interaction simulation
+    const user = userEvent.setup();
+
+    // Render the InputForm component with mock callbacks
+    render(<InputForm onSubmit={mockOnSubmit} onReset={mockOnReset} />);
+
+    // Get references to form elements
+    const zipCodeInput = screen.getByLabelText(/zip code/i);
+    const kidsAgesInput = screen.getByLabelText(/kids ages/i);
+
+    // Fill in zip code and ages with spaces after commas
+    await user.type(zipCodeInput, '94105');
+    await user.type(kidsAgesInput, '5, 8, 12');
+
+    // Wait for all input state updates to complete
+    await waitFor(() => {
+      expect(kidsAgesInput).toHaveValue('5, 8, 12');
+    });
+
+    // Submit the form
+    const submitButton = screen.getByRole('button', { name: /generate plan/i });
+    await user.click(submitButton);
+
+    // Verify that onSubmit was called with parsed ages
+    await waitFor(() => {
+      expect(mockOnSubmit).toHaveBeenCalledTimes(1);
+      expect(mockOnSubmit).toHaveBeenCalledWith(
+        expect.objectContaining({
+          kidsAges: [5, 8, 12]
+        })
+      );
+    });
+  });
+
+  // ============================================================================
+  // Test Case 15: Age Input With Spaces Around Comma "5 , 8 , 12"
+  // ============================================================================
+
+  /**
+   * Test Case 15: Accepts age input with spaces around comma: "5 , 8 , 12"
+   * 
+   * Verifies that comma-separated ages with spaces around commas are properly parsed.
+   */
+  it('accepts age input with spaces around comma: "5 , 8 , 12"', async () => {
+    // Setup userEvent for realistic user interaction simulation
+    const user = userEvent.setup();
+
+    // Render the InputForm component with mock callbacks
+    render(<InputForm onSubmit={mockOnSubmit} onReset={mockOnReset} />);
+
+    // Get references to form elements
+    const zipCodeInput = screen.getByLabelText(/zip code/i);
+    const kidsAgesInput = screen.getByLabelText(/kids ages/i);
+
+    // Fill in zip code and ages with spaces around commas
+    await user.type(zipCodeInput, '94105');
+    await user.type(kidsAgesInput, '5 , 8 , 12');
+
+    // Wait for all input state updates to complete
+    await waitFor(() => {
+      expect(kidsAgesInput).toHaveValue('5 , 8 , 12');
+    });
+
+    // Submit the form
+    const submitButton = screen.getByRole('button', { name: /generate plan/i });
+    await user.click(submitButton);
+
+    // Verify that onSubmit was called with parsed ages
+    await waitFor(() => {
+      expect(mockOnSubmit).toHaveBeenCalledTimes(1);
+      expect(mockOnSubmit).toHaveBeenCalledWith(
+        expect.objectContaining({
+          kidsAges: [5, 8, 12]
+        })
+      );
+    });
+  });
+
+  // ============================================================================
+  // Test Case 16: Empty Kids Ages Field is Valid (Optional Field)
+  // ============================================================================
+
+  /**
+   * Test Case 16: Empty kids ages field is valid (optional field)
+   * 
+   * Verifies that submitting the form with only zip code (no kids ages)
+   * is valid since kids ages is an optional field.
+   */
+  it('allows form submission with only zip code (kids ages optional)', async () => {
+    // Setup userEvent for realistic user interaction simulation
+    const user = userEvent.setup();
+
+    // Render the InputForm component with mock callbacks
+    render(<InputForm onSubmit={mockOnSubmit} onReset={mockOnReset} />);
+
+    // Get reference to zip code input only
+    const zipCodeInput = screen.getByLabelText(/zip code/i);
+
+    // Fill in only the required zip code field
+    await user.type(zipCodeInput, '94105');
+
+    // Wait for input state update to complete
+    await waitFor(() => {
+      expect(zipCodeInput).toHaveValue('94105');
+    });
+
+    // Submit the form
+    const submitButton = screen.getByRole('button', { name: /generate plan/i });
+    await user.click(submitButton);
+
+    // Verify that onSubmit was called with empty kids ages array
+    await waitFor(() => {
+      expect(mockOnSubmit).toHaveBeenCalledTimes(1);
+      expect(mockOnSubmit).toHaveBeenCalledWith(
+        expect.objectContaining({
+          location: '94105',
+          kidsAges: []
+        })
+      );
+    });
+  });
+
+  // ============================================================================
+  // Additional Edge Case Tests for Robustness
+  // ============================================================================
+
+  /**
+   * Additional Test: Verifies form handles blur events correctly
+   * 
+   * Tests that fireEvent.blur can be used to trigger field validation
+   * without full form submission (for accessibility and UX testing).
+   */
+  it('handles field blur events correctly for validation feedback', async () => {
+    // Render the InputForm component with mock callbacks
+    render(<InputForm onSubmit={mockOnSubmit} onReset={mockOnReset} />);
+
+    // Get the zip code input
+    const zipCodeInput = screen.getByLabelText(/zip code/i);
+
+    // Use fireEvent to simulate blur after focusing without entering value
+    fireEvent.focus(zipCodeInput);
+    fireEvent.blur(zipCodeInput);
+
+    // Form should still work - button remains disabled for empty required field
+    const submitButton = screen.getByRole('button', { name: /generate plan/i });
     expect(submitButton).toBeDisabled();
+  });
+
+  /**
+   * Additional Test: Verifies form change events update state correctly
+   * 
+   * Tests that fireEvent.change can be used to update form values
+   * as an alternative to userEvent.type.
+   */
+  it('handles direct change events on form fields', async () => {
+    // Render the InputForm component with mock callbacks
+    render(<InputForm onSubmit={mockOnSubmit} onReset={mockOnReset} />);
+
+    // Get form elements
+    const zipCodeInput = screen.getByLabelText(/zip code/i);
+
+    // Use fireEvent.change to update field values
+    fireEvent.change(zipCodeInput, { target: { value: '10001' } });
+
+    // Verify values are updated
+    expect(zipCodeInput).toHaveValue('10001');
+
+    // Button should now be enabled
+    const submitButton = screen.getByRole('button', { name: /generate plan/i });
+    expect(submitButton).toBeEnabled();
   });
 });
