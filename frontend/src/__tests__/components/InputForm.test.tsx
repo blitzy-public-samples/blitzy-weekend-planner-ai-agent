@@ -332,7 +332,7 @@ describe('InputForm', () => {
 
     // Verify error message appears
     await waitFor(() => {
-      const errorMessage = screen.getByText(/enter valid ages/i);
+      const errorMessage = screen.getByText(/enter ages as numbers separated by commas/i);
       expect(errorMessage).toBeInTheDocument();
     });
 
