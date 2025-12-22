@@ -4,7 +4,7 @@
  * This file contains comprehensive smoke tests that verify critical user flows
  * through the Weekend Planner application. Tests cover:
  * - Initial rendering and component display
- * - Form interaction and validation
+ * - Form interaction and validation (Zip Code required, Kids Ages optional)
  * - Plan generation workflow with loading states
  * - Error handling and recovery
  * - Reset functionality
@@ -12,8 +12,8 @@
  * - Accessibility attributes
  * 
  * The form contains exactly two fields:
- * - Zip Code (required): User's location
- * - Kids Ages (optional): Comma-separated ages (0 < age < 120)
+ * - Zip Code (required): Text input for location
+ * - Kids Ages (optional): Comma-separated integers where 0 < age < 120
  * 
  * Tests use MSW (Mock Service Worker) to simulate ADK backend responses,
  * allowing tests to run without requiring the actual backend server.
@@ -32,10 +32,12 @@ import { server, create400Handler, create500Handler, createDelayedHandler } from
 // ============================================================================
 
 /**
- * Helper function to fill the required Zip Code field.
+ * Helper function to fill all required form fields.
+ * Fills the Zip Code field with a valid value.
  * 
  * @param user - User event instance from userEvent.setup()
  * @param options - Optional overrides for field values
+ * @param options.zipCode - Zip code value (default: '94105')
  */
 async function fillRequiredFields(
   user: ReturnType<typeof userEvent.setup>,
@@ -43,9 +45,11 @@ async function fillRequiredFields(
     zipCode?: string;
   } = {}
 ): Promise<void> {
-  const { zipCode = '94105' } = options;
+  const {
+    zipCode = '94105',
+  } = options;
 
-  // Fill Zip Code field (labeled as "Zip Code")
+  // Fill zip code field
   const zipCodeInput = screen.getByLabelText(/zip code/i);
   await user.clear(zipCodeInput);
   await user.type(zipCodeInput, zipCode);
@@ -68,6 +72,7 @@ async function submitForm(
  * 
  * @param user - User event instance from userEvent.setup()
  * @param options - Values for optional fields
+ * @param options.kidsAges - Comma-separated kids ages string (e.g., '3, 7, 12')
  */
 async function fillOptionalFields(
   user: ReturnType<typeof userEvent.setup>,
@@ -113,7 +118,7 @@ describe('Weekend Planner E2E Smoke Tests', () => {
       // Verify header elements
       expect(screen.getByRole('heading', { name: /weekend planner/i })).toBeInTheDocument();
       
-      // Verify form input fields exist (only Zip Code and Kids Ages)
+      // Verify form input fields exist (two fields only: Zip Code and Kids Ages)
       expect(screen.getByLabelText(/zip code/i)).toBeInTheDocument();
       expect(screen.getByLabelText(/kids.*ages/i)).toBeInTheDocument();
     });
@@ -154,9 +159,9 @@ describe('Weekend Planner E2E Smoke Tests', () => {
 
   describe('Form Interaction', () => {
     /**
-     * Verifies Zip Code field accepts user input.
+     * Verifies zip code field accepts user input.
      */
-    it('allows user to fill in Zip Code field', async () => {
+    it('allows user to fill in zip code field', async () => {
       const user = userEvent.setup();
       render(<App />);
 
@@ -174,9 +179,9 @@ describe('Weekend Planner E2E Smoke Tests', () => {
       render(<App />);
 
       const kidsAgesInput = screen.getByLabelText(/kids.*ages/i);
-      await user.type(kidsAgesInput, '5, 8, 12');
+      await user.type(kidsAgesInput, '3, 7, 12');
 
-      expect(kidsAgesInput).toHaveValue('5, 8, 12');
+      expect(kidsAgesInput).toHaveValue('3, 7, 12');
     });
 
     /**
@@ -190,9 +195,9 @@ describe('Weekend Planner E2E Smoke Tests', () => {
     });
 
     /**
-     * Verifies Generate button becomes enabled when Zip Code is filled.
+     * Verifies Generate button becomes enabled when zip code is filled.
      */
-    it('Generate button becomes enabled when Zip Code is filled', async () => {
+    it('Generate button becomes enabled when zip code is filled', async () => {
       const user = userEvent.setup();
       render(<App />);
 
@@ -211,44 +216,79 @@ describe('Weekend Planner E2E Smoke Tests', () => {
     /**
      * Verifies kids ages field accepts format with spaces around commas.
      */
-    it('accepts valid kids ages format like "5, 8, 12"', async () => {
+    it('accepts valid kids ages format like "3, 7, 12"', async () => {
       const user = userEvent.setup();
       render(<App />);
 
       const kidsAgesInput = screen.getByLabelText(/kids.*ages/i);
-      await user.type(kidsAgesInput, '5, 8, 12');
+      await user.type(kidsAgesInput, '3, 7, 12');
 
       // Input should accept the format without error
-      expect(kidsAgesInput).toHaveValue('5, 8, 12');
+      expect(kidsAgesInput).toHaveValue('3, 7, 12');
       
       // No error message should be displayed for valid format
-      expect(screen.queryByText(/enter valid ages/i)).not.toBeInTheDocument();
+      expect(screen.queryByText(/enter ages as numbers/i)).not.toBeInTheDocument();
     });
 
     /**
-     * Verifies form can be submitted with only Zip Code (Kids Ages is optional).
+     * Verifies error is shown for invalid kids ages (0, 120, negative, decimals).
+     * Ages must be integers where 0 < age < 120.
      */
-    it('allows submission with only Zip Code filled', async () => {
+    it('shows error for invalid kids ages (0, 120, negative, decimals)', async () => {
       const user = userEvent.setup();
       render(<App />);
-
-      // Only fill Zip Code, leave Kids Ages empty
-      await fillRequiredFields(user, { zipCode: '02138' });
-
-      const generateButton = screen.getByRole('button', { name: /generate plan/i });
-      expect(generateButton).toBeEnabled();
       
-      // Should be able to submit
-      await user.click(generateButton);
+      // Fill required field
+      await fillRequiredFields(user);
       
-      // After submission, should see either loading state or successful plan result
-      // (depending on how fast the mock responds)
+      // Test invalid ages (0 and 120 are out of valid range)
+      const kidsAgesInput = screen.getByLabelText(/kids.*ages/i);
+      await user.type(kidsAgesInput, '0, 120');
+      await submitForm(user);
+      
       await waitFor(() => {
-        // Check for either loading state or successful result
-        const isLoading = screen.queryByText(/creating your perfect weekend/i);
-        const isPlanShown = screen.queryByRole('heading', { name: /your weekend plan/i });
-        expect(isLoading || isPlanShown).toBeInTheDocument();
-      }, { timeout: 5000 });
+        expect(screen.getByText(/enter ages as numbers/i)).toBeInTheDocument();
+      });
+    });
+
+    /**
+     * Verifies error is shown for negative ages.
+     */
+    it('shows error for negative kids ages', async () => {
+      const user = userEvent.setup();
+      render(<App />);
+      
+      // Fill required field
+      await fillRequiredFields(user);
+      
+      // Test negative ages
+      const kidsAgesInput = screen.getByLabelText(/kids.*ages/i);
+      await user.type(kidsAgesInput, '-5, 10');
+      await submitForm(user);
+      
+      await waitFor(() => {
+        expect(screen.getByText(/enter ages as numbers/i)).toBeInTheDocument();
+      });
+    });
+
+    /**
+     * Verifies error is shown for decimal ages.
+     */
+    it('shows error for decimal kids ages', async () => {
+      const user = userEvent.setup();
+      render(<App />);
+      
+      // Fill required field
+      await fillRequiredFields(user);
+      
+      // Test decimal ages
+      const kidsAgesInput = screen.getByLabelText(/kids.*ages/i);
+      await user.type(kidsAgesInput, '5.5, 10');
+      await submitForm(user);
+      
+      await waitFor(() => {
+        expect(screen.getByText(/enter ages as numbers/i)).toBeInTheDocument();
+      });
     });
   });
 
@@ -262,7 +302,7 @@ describe('Weekend Planner E2E Smoke Tests', () => {
      */
     it('shows loading state when form is submitted', async () => {
       // Use delayed handler to ensure loading state is visible
-      server.use(createDelayedHandler(3000));
+      server.use(createDelayedHandler(2000));
       
       const user = userEvent.setup();
       render(<App />);
@@ -273,7 +313,7 @@ describe('Weekend Planner E2E Smoke Tests', () => {
       // Loading state should be visible (with delay, we can catch it)
       await waitFor(() => {
         expect(screen.getByText(/creating your perfect weekend/i)).toBeInTheDocument();
-      }, { timeout: 2000 });
+      }, { timeout: 1000 });
     });
 
     /**
@@ -281,7 +321,7 @@ describe('Weekend Planner E2E Smoke Tests', () => {
      */
     it('displays loading message "Creating your perfect weekend..."', async () => {
       // Use delayed handler to ensure loading state is visible
-      server.use(createDelayedHandler(3000));
+      server.use(createDelayedHandler(2000));
       
       const user = userEvent.setup();
       render(<App />);
@@ -291,7 +331,7 @@ describe('Weekend Planner E2E Smoke Tests', () => {
 
       await waitFor(() => {
         expect(screen.getByText(/creating your perfect weekend/i)).toBeInTheDocument();
-      }, { timeout: 2000 });
+      }, { timeout: 1000 });
     });
 
     /**
@@ -413,10 +453,8 @@ describe('Weekend Planner E2E Smoke Tests', () => {
 
       await waitFor(
         () => {
-          // Check for error state UI - the error display uses role="alert"
-          const alertElement = screen.queryByRole('alert');
-          const errorText = screen.queryByText(/invalid/i) || screen.queryByText(/failed/i);
-          expect(alertElement || errorText).toBeTruthy();
+          // Check for error state UI
+          expect(screen.getByRole('alert') || screen.getByText(/error/i) || screen.getByText(/invalid/i)).toBeInTheDocument();
         },
         { timeout: 5000 }
       );
@@ -437,23 +475,20 @@ describe('Weekend Planner E2E Smoke Tests', () => {
 
       await waitFor(
         () => {
-          // Should show error state - check for the alert role
-          const alertElement = screen.queryByRole('alert');
-          const errorMessage = screen.queryByText(/something went wrong/i) ||
-                              screen.queryByText(/failed/i) ||
-                              screen.queryByText(/error/i);
-          expect(alertElement || errorMessage).toBeTruthy();
+          // Should show a user-friendly message, not raw error details
+          const errorContainer = screen.getByRole('alert') || 
+                                screen.getByText(/something went wrong/i) ||
+                                screen.getByText(/server/i);
+          expect(errorContainer).toBeInTheDocument();
         },
         { timeout: 5000 }
       );
     });
 
     /**
-     * Verifies error display is shown when error occurs.
-     * Note: Technical details section only appears when error includes statusCode or body.
-     * Since createSession throws a plain Error, we just verify the error UI is shown.
+     * Verifies expandable technical details section is present in error display.
      */
-    it('shows error display when API fails', async () => {
+    it('shows expandable technical details section', async () => {
       server.use(create500Handler());
 
       const user = userEvent.setup();
@@ -464,8 +499,9 @@ describe('Weekend Planner E2E Smoke Tests', () => {
 
       await waitFor(
         () => {
-          // Look for the error display with alert role
-          expect(screen.queryByRole('alert')).toBeInTheDocument();
+          // Look for technical details toggle or similar UI
+          expect(screen.getByText(/technical details/i) || 
+                 screen.getByText(/details/i)).toBeInTheDocument();
         },
         { timeout: 5000 }
       );
@@ -485,8 +521,9 @@ describe('Weekend Planner E2E Smoke Tests', () => {
 
       await waitFor(
         () => {
-          // Should have a retry button - the ErrorDisplay shows "Try Again"
-          const retryButton = screen.queryByRole('button', { name: /try again/i });
+          // Should have a retry button - check for either "retry" or "try again"
+          const retryButton = screen.queryByRole('button', { name: /retry/i }) ||
+                              screen.queryByRole('button', { name: /try again/i });
           expect(retryButton).toBeInTheDocument();
         },
         { timeout: 5000 }
@@ -509,14 +546,14 @@ describe('Weekend Planner E2E Smoke Tests', () => {
       // Fill all fields
       await fillRequiredFields(user);
       await fillOptionalFields(user, {
-        kidsAges: '5, 8',
+        kidsAges: '3, 7',
       });
 
       // Find and click reset button
       const resetButton = screen.getByRole('button', { name: /reset/i });
       await user.click(resetButton);
 
-      // Verify all fields are cleared
+      // Verify all fields are cleared (two fields only: Zip Code and Kids Ages)
       expect(screen.getByLabelText(/zip code/i)).toHaveValue('');
       expect(screen.getByLabelText(/kids.*ages/i)).toHaveValue('');
     });
@@ -630,7 +667,7 @@ describe('Weekend Planner E2E Smoke Tests', () => {
     it('form inputs have associated labels', () => {
       render(<App />);
 
-      // Each input should be findable by its label
+      // Each input should be findable by its label (two fields only)
       expect(screen.getByLabelText(/zip code/i)).toBeInTheDocument();
       expect(screen.getByLabelText(/kids.*ages/i)).toBeInTheDocument();
 
@@ -643,8 +680,8 @@ describe('Weekend Planner E2E Smoke Tests', () => {
      * Verifies loading state has aria-busy attribute for screen readers.
      */
     it('loading state has aria-busy attribute', async () => {
-      // Use delayed handler to ensure loading state is visible for long enough
-      server.use(createDelayedHandler(3000));
+      // Use delayed handler to ensure loading state is visible
+      server.use(createDelayedHandler(500));
 
       const user = userEvent.setup();
       render(<App />);
@@ -654,14 +691,15 @@ describe('Weekend Planner E2E Smoke Tests', () => {
 
       // During loading, there should be an element with aria-busy
       await waitFor(() => {
-        const loadingContainer = document.querySelector('[aria-busy="true"]');
+        const loadingContainer = screen.getByText(/creating your perfect weekend/i)
+          .closest('[aria-busy="true"]') || 
+          document.querySelector('[aria-busy="true"]');
         expect(loadingContainer).toBeInTheDocument();
-      }, { timeout: 2000 });
+      });
     });
 
     /**
      * Verifies error messages use aria-live for screen reader announcements.
-     * The ErrorDisplay component uses role="alert" which implicitly has aria-live.
      */
     it('error messages use aria-live for announcements', async () => {
       server.use(create500Handler());
@@ -674,10 +712,10 @@ describe('Weekend Planner E2E Smoke Tests', () => {
 
       await waitFor(
         () => {
-          // role="alert" has implicit aria-live="assertive"
-          const alertElement = screen.queryByRole('alert');
-          const ariaLiveElement = document.querySelector('[aria-live]');
-          expect(alertElement || ariaLiveElement).toBeTruthy();
+          // Look for aria-live attribute on error container or role="alert"
+          const alertElement = screen.getByRole('alert') ||
+            document.querySelector('[aria-live]');
+          expect(alertElement).toBeInTheDocument();
         },
         { timeout: 5000 }
       );
@@ -693,6 +731,9 @@ describe('Weekend Planner E2E Smoke Tests', () => {
      * End-to-end test covering a complete user journey from form fill to plan display.
      */
     it('completes full user journey: fill form → submit → view plan → reset', async () => {
+      // Use delayed handler to ensure loading state is visible
+      server.use(createDelayedHandler(500));
+
       const user = userEvent.setup();
       render(<App />);
 
@@ -700,9 +741,13 @@ describe('Weekend Planner E2E Smoke Tests', () => {
       expect(screen.getByText(/enter your details/i)).toBeInTheDocument();
       expect(screen.getByRole('button', { name: /generate plan/i })).toBeDisabled();
 
-      // Step 2: Fill form fields
-      await fillRequiredFields(user, { zipCode: '90210' });
-      await fillOptionalFields(user, { kidsAges: '5, 8' });
+      // Step 2: Fill form fields (zip code required, kids ages optional)
+      await fillRequiredFields(user, {
+        zipCode: '90210',
+      });
+      await fillOptionalFields(user, {
+        kidsAges: '5, 8',
+      });
 
       // Step 3: Verify button is now enabled
       const generateButton = screen.getByRole('button', { name: /generate plan/i });
@@ -711,7 +756,12 @@ describe('Weekend Planner E2E Smoke Tests', () => {
       // Step 4: Submit form
       await user.click(generateButton);
 
-      // Step 5: Wait for plan to be displayed (loading state may be too fast to catch)
+      // Step 5: Verify loading state
+      await waitFor(() => {
+        expect(screen.getByText(/creating your perfect weekend/i)).toBeInTheDocument();
+      });
+
+      // Step 6: Verify plan is displayed
       await waitFor(
         () => {
           expect(screen.getByRole('heading', { name: /your weekend plan/i })).toBeInTheDocument();
@@ -719,7 +769,7 @@ describe('Weekend Planner E2E Smoke Tests', () => {
         { timeout: 5000 }
       );
 
-      // Step 6: Reset and verify return to initial state
+      // Step 7: Reset and verify return to initial state
       const resetButton = screen.getByRole('button', { name: /reset/i });
       await user.click(resetButton);
 
