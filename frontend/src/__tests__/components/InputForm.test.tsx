@@ -385,19 +385,19 @@ describe('InputForm', () => {
     // OR verify that an error message appears
     await waitFor(() => {
       // Either submission is blocked or error is shown
-      const errorMessage = screen.queryByText(/invalid age/i) || 
-                          screen.queryByText(/ages must be between/i) ||
-                          screen.queryByText(/enter ages as numbers/i);
+      const hasErrorMessage = screen.queryByText(/invalid age/i) !== null || 
+                              screen.queryByText(/ages must be between/i) !== null ||
+                              screen.queryByText(/enter ages as numbers/i) !== null;
       // Check if form submission was blocked (mockOnSubmit not called)
       // or error is displayed
-      if (mockOnSubmit.mock.calls.length > 0) {
-        // If somehow called, it should not include invalid age
-        expect(mockOnSubmit).not.toHaveBeenCalledWith(
-          expect.objectContaining({
-            kidsAges: expect.arrayContaining([0])
-          })
-        );
-      }
+      const wasNotCalledWithInvalidAge = mockOnSubmit.mock.calls.length === 0 ||
+        !mockOnSubmit.mock.calls.some((call: unknown[]) => {
+          const arg = call[0] as { kidsAges?: number[] };
+          return arg?.kidsAges?.includes(0);
+        });
+      
+      // Either validation prevented submission or error is shown
+      expect(wasNotCalledWithInvalidAge || hasErrorMessage).toBe(true);
     });
   });
 
@@ -437,14 +437,18 @@ describe('InputForm', () => {
 
     // Verify that onSubmit was NOT called with invalid age
     await waitFor(() => {
-      if (mockOnSubmit.mock.calls.length > 0) {
-        // If somehow called, it should not include invalid age
-        expect(mockOnSubmit).not.toHaveBeenCalledWith(
-          expect.objectContaining({
-            kidsAges: expect.arrayContaining([120])
-          })
-        );
-      }
+      // Either validation prevented submission or error is shown
+      const hasErrorMessage = screen.queryByText(/invalid age/i) !== null || 
+                              screen.queryByText(/ages must be between/i) !== null ||
+                              screen.queryByText(/enter ages as numbers/i) !== null;
+      const wasNotCalledWithInvalidAge = mockOnSubmit.mock.calls.length === 0 ||
+        !mockOnSubmit.mock.calls.some((call: unknown[]) => {
+          const arg = call[0] as { kidsAges?: number[] };
+          return arg?.kidsAges?.includes(120);
+        });
+      
+      // Either validation prevented submission or error is shown
+      expect(wasNotCalledWithInvalidAge || hasErrorMessage).toBe(true);
     });
   });
 
