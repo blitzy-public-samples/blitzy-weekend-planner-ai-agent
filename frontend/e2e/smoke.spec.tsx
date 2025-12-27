@@ -4,12 +4,16 @@
  * This file contains comprehensive smoke tests that verify critical user flows
  * through the Weekend Planner application. Tests cover:
  * - Initial rendering and component display
- * - Form interaction and validation
+ * - Form interaction and validation (Zip Code required, Kids Ages optional)
  * - Plan generation workflow with loading states
  * - Error handling and recovery
  * - Reset functionality
  * - Responsive layout behavior
  * - Accessibility attributes
+ * 
+ * The form contains exactly two fields:
+ * - Zip Code (required): Text input for location
+ * - Kids Ages (optional): Comma-separated integers where 0 < age < 120
  * 
  * Tests use MSW (Mock Service Worker) to simulate ADK backend responses,
  * allowing tests to run without requiring the actual backend server.
@@ -29,39 +33,26 @@ import { server, create400Handler, create500Handler, createDelayedHandler } from
 
 /**
  * Helper function to fill all required form fields.
- * Fills location, start date, and end date fields with valid values.
+ * Fills the Zip Code field with a valid value.
  * 
  * @param user - User event instance from userEvent.setup()
  * @param options - Optional overrides for field values
+ * @param options.zipCode - Zip code value (default: '94105')
  */
 async function fillRequiredFields(
   user: ReturnType<typeof userEvent.setup>,
   options: {
-    location?: string;
-    startDate?: string;
-    endDate?: string;
+    zipCode?: string;
   } = {}
 ): Promise<void> {
   const {
-    location = 'San Francisco',
-    startDate = '2024-03-01',
-    endDate = '2024-03-03',
+    zipCode = '94105',
   } = options;
 
-  // Fill location field
-  const locationInput = screen.getByLabelText(/location/i);
-  await user.clear(locationInput);
-  await user.type(locationInput, location);
-
-  // Fill start date field
-  const startDateInput = screen.getByLabelText(/start date/i);
-  await user.clear(startDateInput);
-  await user.type(startDateInput, startDate);
-
-  // Fill end date field
-  const endDateInput = screen.getByLabelText(/end date/i);
-  await user.clear(endDateInput);
-  await user.type(endDateInput, endDate);
+  // Fill zip code field
+  const zipCodeInput = screen.getByLabelText(/zip code/i);
+  await user.clear(zipCodeInput);
+  await user.type(zipCodeInput, zipCode);
 }
 
 /**
@@ -81,26 +72,20 @@ async function submitForm(
  * 
  * @param user - User event instance from userEvent.setup()
  * @param options - Values for optional fields
+ * @param options.kidsAges - Comma-separated kids ages string (e.g., '3, 7, 12')
  */
 async function fillOptionalFields(
   user: ReturnType<typeof userEvent.setup>,
   options: {
     kidsAges?: string;
-    preferences?: string;
   } = {}
 ): Promise<void> {
-  const { kidsAges, preferences } = options;
+  const { kidsAges } = options;
 
   if (kidsAges) {
     const kidsAgesInput = screen.getByLabelText(/kids.*ages/i);
     await user.clear(kidsAgesInput);
     await user.type(kidsAgesInput, kidsAges);
-  }
-
-  if (preferences) {
-    const preferencesInput = screen.getByLabelText(/preferences/i);
-    await user.clear(preferencesInput);
-    await user.type(preferencesInput, preferences);
   }
 }
 
@@ -133,10 +118,9 @@ describe('Weekend Planner E2E Smoke Tests', () => {
       // Verify header elements
       expect(screen.getByRole('heading', { name: /weekend planner/i })).toBeInTheDocument();
       
-      // Verify form input fields exist
-      expect(screen.getByLabelText(/location/i)).toBeInTheDocument();
-      expect(screen.getByLabelText(/start date/i)).toBeInTheDocument();
-      expect(screen.getByLabelText(/end date/i)).toBeInTheDocument();
+      // Verify form input fields exist (two fields only: Zip Code and Kids Ages)
+      expect(screen.getByLabelText(/zip code/i)).toBeInTheDocument();
+      expect(screen.getByLabelText(/kids.*ages/i)).toBeInTheDocument();
     });
 
     /**
@@ -175,33 +159,16 @@ describe('Weekend Planner E2E Smoke Tests', () => {
 
   describe('Form Interaction', () => {
     /**
-     * Verifies location field accepts user input.
+     * Verifies zip code field accepts user input.
      */
-    it('allows user to fill in location field', async () => {
+    it('allows user to fill in zip code field', async () => {
       const user = userEvent.setup();
       render(<App />);
 
-      const locationInput = screen.getByLabelText(/location/i);
-      await user.type(locationInput, 'San Francisco');
+      const zipCodeInput = screen.getByLabelText(/zip code/i);
+      await user.type(zipCodeInput, '94105');
 
-      expect(locationInput).toHaveValue('San Francisco');
-    });
-
-    /**
-     * Verifies date picker fields accept valid dates.
-     */
-    it('allows user to select start and end dates', async () => {
-      const user = userEvent.setup();
-      render(<App />);
-
-      const startDateInput = screen.getByLabelText(/start date/i);
-      const endDateInput = screen.getByLabelText(/end date/i);
-
-      await user.type(startDateInput, '2024-03-01');
-      await user.type(endDateInput, '2024-03-03');
-
-      expect(startDateInput).toHaveValue('2024-03-01');
-      expect(endDateInput).toHaveValue('2024-03-03');
+      expect(zipCodeInput).toHaveValue('94105');
     });
 
     /**
@@ -218,19 +185,6 @@ describe('Weekend Planner E2E Smoke Tests', () => {
     });
 
     /**
-     * Verifies preferences textarea accepts free-form text.
-     */
-    it('allows user to enter preferences text', async () => {
-      const user = userEvent.setup();
-      render(<App />);
-
-      const preferencesInput = screen.getByLabelText(/preferences/i);
-      await user.type(preferencesInput, 'outdoor activities, avoid crowds');
-
-      expect(preferencesInput).toHaveValue('outdoor activities, avoid crowds');
-    });
-
-    /**
      * Verifies Generate button is disabled when required fields are empty.
      */
     it('Generate button is disabled when required fields are empty', () => {
@@ -241,9 +195,9 @@ describe('Weekend Planner E2E Smoke Tests', () => {
     });
 
     /**
-     * Verifies Generate button becomes enabled when all required fields are filled.
+     * Verifies Generate button becomes enabled when zip code is filled.
      */
-    it('Generate button becomes enabled when location and dates are filled', async () => {
+    it('Generate button becomes enabled when zip code is filled', async () => {
       const user = userEvent.setup();
       render(<App />);
 
@@ -260,30 +214,6 @@ describe('Weekend Planner E2E Smoke Tests', () => {
 
   describe('Form Validation', () => {
     /**
-     * Verifies error message is shown when end date is before start date.
-     */
-    it('shows error when end date is before start date', async () => {
-      const user = userEvent.setup();
-      render(<App />);
-
-      // Fill dates with end date before start date
-      await fillRequiredFields(user, {
-        location: 'San Francisco',
-        startDate: '2024-03-10',
-        endDate: '2024-03-05', // Before start date
-      });
-
-      // Submit the form to trigger validation
-      const generateButton = screen.getByRole('button', { name: /generate plan/i });
-      await user.click(generateButton);
-
-      // Check for validation error message (appears after form submission triggers validation)
-      await waitFor(() => {
-        expect(screen.getByText(/end date must be on or after start date/i)).toBeInTheDocument();
-      });
-    });
-
-    /**
      * Verifies kids ages field accepts format with spaces around commas.
      */
     it('accepts valid kids ages format like "3, 7, 12"', async () => {
@@ -298,6 +228,67 @@ describe('Weekend Planner E2E Smoke Tests', () => {
       
       // No error message should be displayed for valid format
       expect(screen.queryByText(/enter ages as numbers/i)).not.toBeInTheDocument();
+    });
+
+    /**
+     * Verifies error is shown for invalid kids ages (0, 120, negative, decimals).
+     * Ages must be integers where 0 < age < 120.
+     */
+    it('shows error for invalid kids ages (0, 120, negative, decimals)', async () => {
+      const user = userEvent.setup();
+      render(<App />);
+      
+      // Fill required field
+      await fillRequiredFields(user);
+      
+      // Test invalid ages (0 and 120 are out of valid range)
+      const kidsAgesInput = screen.getByLabelText(/kids.*ages/i);
+      await user.type(kidsAgesInput, '0, 120');
+      await submitForm(user);
+      
+      await waitFor(() => {
+        expect(screen.getByText(/enter ages as numbers/i)).toBeInTheDocument();
+      });
+    });
+
+    /**
+     * Verifies error is shown for negative ages.
+     */
+    it('shows error for negative kids ages', async () => {
+      const user = userEvent.setup();
+      render(<App />);
+      
+      // Fill required field
+      await fillRequiredFields(user);
+      
+      // Test negative ages
+      const kidsAgesInput = screen.getByLabelText(/kids.*ages/i);
+      await user.type(kidsAgesInput, '-5, 10');
+      await submitForm(user);
+      
+      await waitFor(() => {
+        expect(screen.getByText(/enter ages as numbers/i)).toBeInTheDocument();
+      });
+    });
+
+    /**
+     * Verifies error is shown for decimal ages.
+     */
+    it('shows error for decimal kids ages', async () => {
+      const user = userEvent.setup();
+      render(<App />);
+      
+      // Fill required field
+      await fillRequiredFields(user);
+      
+      // Test decimal ages
+      const kidsAgesInput = screen.getByLabelText(/kids.*ages/i);
+      await user.type(kidsAgesInput, '5.5, 10');
+      await submitForm(user);
+      
+      await waitFor(() => {
+        expect(screen.getByText(/enter ages as numbers/i)).toBeInTheDocument();
+      });
     });
   });
 
@@ -556,19 +547,15 @@ describe('Weekend Planner E2E Smoke Tests', () => {
       await fillRequiredFields(user);
       await fillOptionalFields(user, {
         kidsAges: '3, 7',
-        preferences: 'outdoor activities',
       });
 
       // Find and click reset button
       const resetButton = screen.getByRole('button', { name: /reset/i });
       await user.click(resetButton);
 
-      // Verify all fields are cleared
-      expect(screen.getByLabelText(/location/i)).toHaveValue('');
-      expect(screen.getByLabelText(/start date/i)).toHaveValue('');
-      expect(screen.getByLabelText(/end date/i)).toHaveValue('');
+      // Verify all fields are cleared (two fields only: Zip Code and Kids Ages)
+      expect(screen.getByLabelText(/zip code/i)).toHaveValue('');
       expect(screen.getByLabelText(/kids.*ages/i)).toHaveValue('');
-      expect(screen.getByLabelText(/preferences/i)).toHaveValue('');
     });
 
     /**
@@ -680,16 +667,13 @@ describe('Weekend Planner E2E Smoke Tests', () => {
     it('form inputs have associated labels', () => {
       render(<App />);
 
-      // Each input should be findable by its label
-      expect(screen.getByLabelText(/location/i)).toBeInTheDocument();
-      expect(screen.getByLabelText(/start date/i)).toBeInTheDocument();
-      expect(screen.getByLabelText(/end date/i)).toBeInTheDocument();
+      // Each input should be findable by its label (two fields only)
+      expect(screen.getByLabelText(/zip code/i)).toBeInTheDocument();
       expect(screen.getByLabelText(/kids.*ages/i)).toBeInTheDocument();
-      expect(screen.getByLabelText(/preferences/i)).toBeInTheDocument();
 
       // Verify the inputs are actual form elements
-      const locationInput = screen.getByLabelText(/location/i);
-      expect(locationInput.tagName).toBe('INPUT');
+      const zipCodeInput = screen.getByLabelText(/zip code/i);
+      expect(zipCodeInput.tagName).toBe('INPUT');
     });
 
     /**
@@ -757,15 +741,12 @@ describe('Weekend Planner E2E Smoke Tests', () => {
       expect(screen.getByText(/enter your details/i)).toBeInTheDocument();
       expect(screen.getByRole('button', { name: /generate plan/i })).toBeDisabled();
 
-      // Step 2: Fill form fields
+      // Step 2: Fill form fields (zip code required, kids ages optional)
       await fillRequiredFields(user, {
-        location: 'Los Angeles',
-        startDate: '2024-04-05',
-        endDate: '2024-04-07',
+        zipCode: '90210',
       });
       await fillOptionalFields(user, {
         kidsAges: '5, 8',
-        preferences: 'beach activities',
       });
 
       // Step 3: Verify button is now enabled
@@ -794,7 +775,7 @@ describe('Weekend Planner E2E Smoke Tests', () => {
 
       await waitFor(() => {
         expect(screen.getByText(/enter your details/i)).toBeInTheDocument();
-        expect(screen.getByLabelText(/location/i)).toHaveValue('');
+        expect(screen.getByLabelText(/zip code/i)).toHaveValue('');
       });
     });
 

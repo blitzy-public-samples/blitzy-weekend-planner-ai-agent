@@ -4,1426 +4,883 @@
 
 ## 0.1 Intent Clarification
 
-### 0.1.1 Core Feature Objective
+### 0.1.1 Core Objective
 
-Based on the prompt, the Blitzy platform understands that the new feature requirement is to **create a complete frontend application for the Weekend Planner AI Agent** that provides a polished user interface for interacting with the existing Google ADK-powered backend. The frontend will be built as a standalone React application residing in a new `frontend/` directory at the repository root.
+Based on the provided requirements, the Blitzy platform understands that the objective is to **fix all identified frontend bugs, create comprehensive documentation, and add test coverage** for the Weekend Planner application. The frontend is currently non-functional and must be restored to a working state while the backend remains frozen.
 
-**Primary Feature Requirements:**
+**Primary Requirements:**
 
-| Requirement ID | Requirement Description | Technical Interpretation |
-|----------------|------------------------|--------------------------|
-| FE-001 | Create React 18.2.0 application with TypeScript 5.x | Build a modern, type-safe SPA using Vite 5.x as the build tool |
-| FE-002 | Implement form-based user input for weekend planning | Create InputForm component with location, dates, kids ages, and preferences fields |
-| FE-003 | Display AI-generated weekend plans | Implement PlanView component to render structured activity recommendations |
-| FE-004 | Handle loading and error states gracefully | Build LoadingState and ErrorDisplay components with accessibility support |
-| FE-005 | Integrate with ADK backend API at `http://localhost:8000` | Implement API client using native `fetch` with session management |
-| FE-006 | Provide comprehensive test coverage (80%+) | Create unit tests with Vitest, React Testing Library, and MSW mocks |
-| FE-007 | Create end-user documentation | Write non-technical guides in `/docs` folder |
+- Fix the session management API endpoint architecture from `POST /run` to a two-step session-based flow using Google ADK conventions
+- Fix Kids Ages field validation to accept comma-separated integers with spaces and enforce proper age range (0 < age < 120)
+- Remove unused form fields (Start Date, End Date, Preferences) and rename "Location" to "Zip Code"
+- Relax mandatory field requirements so only Zip Code is required
+- Fix color contrast for WCAG AA compliance by replacing salmon (#E07A5F) with dark blue (#1e3a5f)
+- Create comprehensive README documentation enabling zero-assistance setup
+- Add test coverage validating all bug fixes using MSW mock handlers
 
 **Implicit Requirements Detected:**
 
-- CORS handling configuration for cross-origin requests between frontend (port 5173) and backend (port 8000)
-- Session persistence management for ADK conversations
-- Responsive design implementation using Tailwind CSS utility classes
-- Environment variable configuration for API endpoint flexibility
-- Proxy configuration in Vite for development mode API routing
-- Error boundary implementation for React component failures
-- Form validation with date comparison logic (end date ≥ start date)
+- Update `GeneratePlanInput` TypeScript interface to reflect removed fields
+- Update all existing tests to match new form structure and API behavior
+- Update MSW handlers to support the two-step session flow
+- Update Tailwind configuration and CSS custom properties for new color scheme
+- Ensure all component files using color classes are updated
 
-**Feature Dependencies and Prerequisites:**
+### 0.1.2 Task Categorization
 
-- Backend ADK server running via `adk web` command at `http://localhost:8000`
-- Node.js 20.x LTS runtime environment
-- Access to Google API credentials (handled by backend only)
-- No authentication system required (simplified single-user model)
+| Dimension | Classification |
+|-----------|----------------|
+| Primary Task Type | Bug Fix |
+| Secondary Aspects | Documentation, Configuration, Testing |
+| Scope Classification | Cross-cutting change |
 
-### 0.1.2 Special Instructions and Constraints
+### 0.1.3 Special Instructions and Constraints
 
-**CRITICAL Preservation Directives:**
+**User-Specified Directives:**
 
-| Directive | Scope | Enforcement |
-|-----------|-------|-------------|
-| DO NOT modify backend code | `WeekendPlanner/**/*` | All files under this directory are immutable |
-| DO NOT change agent configuration | `WeekendPlanner/agent.py` | Agent prompts, models, and tools unchanged |
-| DO NOT require backend API changes | All backend endpoints | Frontend adapts to existing contract |
-| DO NOT add authentication | Entire application | Single-user model without login |
-| DO NOT add multi-page routing | Frontend application | Single-page application only |
-| DO NOT add databases | Frontend application | Stateless frontend operation |
+- **DO NOT** modify any files in `backend/` directory
+- **DO NOT** modify ADK agent code
+- **DO NOT** change backend API contracts
+- Frontend is broken—fix it completely. Refactoring is permitted where necessary
+- If additional frontend issues are discovered, fix them and document what was changed
 
-**Architectural Requirements:**
+**Methodological Requirements:**
 
-- Use existing ADK API contract exactly as specified (POST `/run`, POST `/apps/{app}/users/{user}/sessions/{session}`)
-- Follow functional component pattern with React hooks exclusively
-- Implement strict TypeScript compilation (`"strict": true`)
-- Use native `fetch` API - no Axios or other HTTP libraries
-- Maintain code organization exactly as specified in file structure
+- Form must contain exactly two fields: Zip Code (required) and Kids Ages (optional)
+- Zip Code validation: Non-empty string
+- Kids Ages validation: Comma-separated integers where 0 < age < 120
+- Session ID generated client-side via `crypto.randomUUID()`
+- Use static `userId` (e.g., `"user-1"`) or generate per-session
+- Color scheme: Dark blue (#1e3a5f) primary with white (#ffffff) background
 
-**User-Provided Examples (Preserved Exactly):**
+**User Example (preserved verbatim):**
 
-User Example - Backend API Session Creation:
-```
-POST /apps/{app_name}/users/{user_id}/sessions/{session_id}
-Content-Type: application/json
-Body: {}
-```
-
-User Example - Backend API Execute Agent Run:
-```
-POST /run
-Content-Type: application/json
-
-{
-  "app_name": "WeekendPlanner",
-  "user_id": "ui_user",
-  "session_id": "session_001",
-  "new_message": {
-    "role": "user",
-    "parts": [{ "text": "Natural language request" }]
-  },
-  "streaming": false
-}
-```
-
-User Example - Message Construction Logic:
+User Example - Age Parsing:
 ```typescript
-function buildPrompt(input: GeneratePlanInput): string {
-  let prompt = `Plan a weekend trip to ${input.location}...`;
-  // Additional prompt building logic
+function parseKidsAges(input: string): number[] | null {
+  if (!input.trim()) return []; // Empty is valid (optional field)
+  
+  const ages = input.split(',').map(s => s.trim());
+  const result: number[] = [];
+  
+  for (const age of ages) {
+    const num = parseInt(age, 10);
+    if (isNaN(num) || age !== String(num) || num <= 0 || num >= 120) {
+      return null; // Invalid
+    }
+    result.push(num);
+  }
+  return result;
 }
 ```
 
-**Web Search Research Requirements:**
+User Example - Session Flow:
+```typescript
+// Step 1: Generate session ID client-side
+const sessionId = crypto.randomUUID();
 
-- Best practices for React 18 with Vite 5.x integration
-- MSW 2.x handler configuration patterns for testing
-- Tailwind CSS 3.4.x integration with Vite
-- Vitest coverage configuration with v8 provider
+// Step 2: Create session
+POST /apps/WeekendPlanner/users/{userId}/sessions/{sessionId}
+Body: {} (empty)
+Response: 200 OK (session created)
 
-### 0.1.3 Technical Interpretation
+// Step 3: Send message to session
+POST /apps/WeekendPlanner/users/{userId}/sessions/{sessionId}
+Body: { "new_message": { "role": "user", "parts": [{ "text": "..." }] } }
+Response: { plan data }
+```
 
-These feature requirements translate to the following technical implementation strategy:
+### 0.1.4 Technical Interpretation
 
-**API Integration Strategy:**
-- To implement backend communication, we will create `frontend/src/api/client.ts` with typed functions for session creation and agent execution
-- To handle response parsing, we will implement ADK response type guards and extractors that parse the event-based response structure
-- To manage timeouts, we will implement 30-second AbortController-based request cancellation
+These requirements translate to the following technical implementation strategy:
 
-**Component Architecture Strategy:**
-- To implement the input interface, we will create `InputForm.tsx` with controlled form state using React useState hooks and date validation logic
-- To display results, we will create `PlanView.tsx` that renders structured plan content with collapsible raw output section
-- To handle errors, we will create `ErrorDisplay.tsx` with user-friendly messages and expandable technical details
-- To show loading states, we will create `LoadingState.tsx` with skeleton animations and aria-busy accessibility attributes
-
-**Testing Strategy:**
-- To ensure API reliability, we will create MSW handlers in `src/__mocks__/handlers.ts` mocking all ADK endpoints
-- To validate components, we will create React Testing Library tests for all user interactions and state transitions
-- To achieve 80%+ coverage, we will implement comprehensive unit tests for all exported functions and components
-
-**Documentation Strategy:**
-- To serve end users, we will create Markdown documentation in `frontend/docs/` with non-technical language
-- To support setup, we will include screenshot placeholders with descriptive capture instructions
-- To visualize user flow, we will include Mermaid diagrams in user guide documentation
-
----
+- To **fix session management**, we will refactor `frontend/src/api/client.ts` to implement a two-step session flow: first creating a session with an empty body POST, then sending the plan request with `new_message` payload to the same endpoint
+- To **fix Kids Ages validation**, we will rewrite the parsing logic in `frontend/src/components/InputForm.tsx` to accept whitespace around commas and validate ages against the range 0 < age < 120
+- To **remove unused fields**, we will delete Start Date, End Date, and Preferences inputs from `InputForm.tsx`, rename Location to Zip Code, and update the `GeneratePlanInput` interface in `frontend/src/types.ts`
+- To **relax field requirements**, we will modify form validation to only require Zip Code, making Kids Ages optional
+- To **fix color contrast**, we will update `frontend/tailwind.config.cjs` and `frontend/src/index.css` to replace #E07A5F with #1e3a5f throughout the theme
+- To **create documentation**, we will comprehensively rewrite `README.md` with prerequisites, environment setup, installation, running instructions, API endpoints, testing, and troubleshooting sections
+- To **add test coverage**, we will create/update tests in `frontend/src/__tests__/` with MSW handlers supporting the session-based API flow
 
 ## 0.2 Repository Scope Discovery
 
 ### 0.2.1 Comprehensive File Analysis
 
-**Existing Repository Structure (Immutable):**
-
-The current repository contains backend-only files that must NOT be modified:
-
-| Path | Type | Status | Purpose |
-|------|------|--------|---------|
-| `WeekendPlanner/` | Directory | IMMUTABLE | Backend Python package |
-| `WeekendPlanner/__init__.py` | File | IMMUTABLE | Package initializer exporting agent module |
-| `WeekendPlanner/agent.py` | File | IMMUTABLE | Multi-agent ADK pipeline definition |
-| `requirements.txt` | File | IMMUTABLE | Python dependencies (google-adk>=0.1.0) |
-| `.env.example` | File | IMMUTABLE | Backend environment template |
-| `README.md` | File | MODIFY | Add frontend setup instructions |
-| `CONTRIBUTING.md` | File | IMMUTABLE | Contribution guidelines |
-| `DEPLOYMENT.md` | File | IMMUTABLE | Deployment documentation |
-| `CHANGELOG.md` | File | MODIFY | Add frontend release notes |
-| `LICENSE` | File | IMMUTABLE | MIT License |
-| `.gitattributes` | File | IMMUTABLE | Git line ending configuration |
-
-**New Frontend Directory Structure to Create:**
+**Repository Structure Overview:**
 
 ```
-frontend/
-├── README.md                          # Frontend-specific documentation
-├── .env.example                       # Environment variables template
-├── package.json                       # npm dependencies and scripts
-├── vite.config.ts                     # Vite build configuration
-├── vitest.config.ts                   # Vitest test configuration
-├── tsconfig.json                      # TypeScript compiler options
-├── tailwind.config.js                 # Tailwind CSS configuration
-├── postcss.config.js                  # PostCSS configuration
-├── index.html                         # HTML entry point
-├── docs/
-│   ├── README.md                      # Documentation index
-│   ├── getting-started.md             # Quick start guide
-│   ├── user-guide.md                  # Complete feature walkthrough
-│   ├── troubleshooting.md             # Common issues and solutions
-│   └── images/                        # Screenshot placeholders
-│       ├── home-empty-state.png.txt
-│       ├── form-filled.png.txt
-│       ├── form-validation-error.png.txt
-│       ├── loading-state.png.txt
-│       ├── plan-result.png.txt
-│       ├── plan-raw-output.png.txt
-│       ├── error-state.png.txt
-│       └── regenerate-flow.png.txt
-├── src/
-│   ├── main.tsx                       # Application entry point
-│   ├── App.tsx                        # Root component
-│   ├── index.css                      # Global styles with Tailwind
-│   ├── types.ts                       # TypeScript type definitions
-│   ├── api/
-│   │   └── client.ts                  # ADK API client implementation
-│   ├── components/
-│   │   ├── InputForm.tsx              # User input form component
-│   │   ├── PlanView.tsx               # Plan display component
-│   │   ├── RawOutput.tsx              # Collapsible raw response viewer
-│   │   ├── LoadingState.tsx           # Loading skeleton component
-│   │   └── ErrorDisplay.tsx           # Error display component
-│   ├── __tests__/
-│   │   ├── setup.ts                   # Test environment setup
+/tmp/blitzy/blitzy-weekend-planner-ai-agent/main/
+├── README.md                     # Root documentation (UPDATE)
+├── frontend/                     # React SPA (primary scope)
+│   ├── package.json              # Dependencies manifest
+│   ├── tailwind.config.cjs       # Tailwind theme (UPDATE)
+│   ├── vite.config.ts            # Build configuration
+│   ├── src/
 │   │   ├── api/
-│   │   │   └── client.test.ts         # API client tests
-│   │   └── components/
-│   │       ├── InputForm.test.tsx
-│   │       ├── PlanView.test.tsx
-│   │       ├── ErrorDisplay.test.tsx
-│   │       ├── LoadingState.test.tsx
-│   │       └── RawOutput.test.tsx
-│   └── __mocks__/
-│       └── handlers.ts                # MSW request handlers
-└── e2e/
-    └── smoke.spec.ts                  # End-to-end smoke tests
+│   │   │   └── client.ts         # API client (UPDATE)
+│   │   ├── components/
+│   │   │   ├── InputForm.tsx     # Form component (UPDATE)
+│   │   │   ├── PlanView.tsx      # Plan display
+│   │   │   ├── LoadingState.tsx  # Loading indicator
+│   │   │   ├── ErrorDisplay.tsx  # Error display
+│   │   │   └── RawOutput.tsx     # Raw output display
+│   │   ├── __mocks__/
+│   │   │   └── handlers.ts       # MSW handlers (UPDATE)
+│   │   ├── __tests__/
+│   │   │   ├── api/
+│   │   │   │   └── client.test.ts    # API tests (UPDATE)
+│   │   │   └── components/
+│   │   │       ├── InputForm.test.tsx # Form tests (UPDATE)
+│   │   │       └── [other tests]
+│   │   ├── App.tsx               # Main application (REVIEW for colors)
+│   │   ├── index.css             # Global styles (UPDATE)
+│   │   ├── types.ts              # TypeScript interfaces (UPDATE)
+│   │   └── main.tsx              # Entry point
+│   ├── e2e/
+│   │   └── smoke.spec.tsx        # E2E tests (UPDATE)
+│   └── docs/                     # Frontend documentation
+├── WeekendPlanner/               # Backend (DO NOT MODIFY)
+└── blitzy/                       # Documentation artifacts
 ```
 
-### 0.2.2 Integration Point Discovery
+**Files Identified for Modification:**
 
-**API Endpoint Integration:**
+| Category | Files | Change Type |
+|----------|-------|-------------|
+| API Layer | `frontend/src/api/client.ts` | Major refactor |
+| Components | `frontend/src/components/InputForm.tsx` | Major refactor |
+| Types | `frontend/src/types.ts` | Interface updates |
+| Styling | `frontend/tailwind.config.cjs` | Color scheme update |
+| Styling | `frontend/src/index.css` | CSS variable updates |
+| Styling | `frontend/src/App.tsx` | Color class review |
+| Testing | `frontend/src/__mocks__/handlers.ts` | Session flow handlers |
+| Testing | `frontend/src/__tests__/api/client.test.ts` | New test cases |
+| Testing | `frontend/src/__tests__/components/InputForm.test.tsx` | Updated test cases |
+| Testing | `frontend/e2e/smoke.spec.tsx` | E2E test updates |
+| Documentation | `README.md` | Comprehensive rewrite |
 
-| Endpoint | Method | Purpose | Frontend Client Function |
-|----------|--------|---------|-------------------------|
-| `/apps/{app}/users/{user}/sessions/{session}` | POST | Create ADK session | `createSession()` |
-| `/run` | POST | Execute agent with message | `generatePlan()` |
+### 0.2.2 Web Search Research Conducted
 
-**Backend Model Compatibility:**
+**Google ADK Session API Best Practices:**
 
-The existing backend uses `gemini-2.5-flash` model and expects natural language input. The frontend must construct prompts that match the expected format:
+Research confirmed the correct ADK API pattern:
+- Session creation: `POST /apps/{app_name}/users/{user_id}/sessions/{session_id}` with optional state in body
+- Message sending: Same endpoint with `new_message` payload containing `role` and `parts`
+- Session IDs should be client-generated UUIDs
+- Sessions can be created with empty body `{}` for minimal initialization
 
-- Input: Location (interpreted as zip code or city name)
-- Input: Date range (weekend start and end dates)
-- Input: Children's ages (comma-separated integers 1-18)
-- Input: Preferences (free-form text for activity preferences)
+**WCAG AA Color Contrast Requirements:**
 
-**Data Flow Integration:**
+- Minimum contrast ratio: 4.5:1 for normal text, 3:1 for large text
+- Dark blue (#1e3a5f) on white (#ffffff) provides ~10.5:1 ratio (excellent)
+- Salmon (#E07A5F) on white fails at ~3.0:1 ratio (insufficient)
 
-```mermaid
-flowchart LR
-    subgraph Frontend["Frontend (Port 5173)"]
-        InputForm["InputForm Component"]
-        APIClient["API Client"]
-        PlanView["PlanView Component"]
-    end
-    
-    subgraph Backend["Backend (Port 8000)"]
-        ADKServer["ADK Web Server"]
-        RootAgent["WeekendPlannerRootAgent"]
-    end
-    
-    InputForm -->|"Form Data"| APIClient
-    APIClient -->|"POST /run"| ADKServer
-    ADKServer -->|"ADKResponse[]"| APIClient
-    APIClient -->|"GeneratePlanResult"| PlanView
-```
+**React/Vitest Testing Best Practices:**
 
-### 0.2.3 Web Search Research Conducted
+- Use `@testing-library/react` with `userEvent` for interaction simulation
+- Wrap state-changing operations in `act()` when testing async behavior
+- MSW handlers should intercept at network level for realistic testing
 
-**Research Areas Investigated:**
+### 0.2.3 Existing Infrastructure Assessment
 
-| Topic | Finding | Application |
-|-------|---------|-------------|
-| Google ADK REST API | Uses `/run` endpoint with event-based response | Implement typed response parsing |
-| Vite 5.x configuration | Requires Node.js 18+ and Rollup 4 | Configure for React with TypeScript |
-| MSW 2.x patterns | Uses `http.post()` handler syntax | Update mock handlers for v2 API |
-| Tailwind CSS 3.4.x | Supports modern CSS features and JIT | Configure content paths for purging |
+**Project Structure:**
+- Frontend: React 18.2.0 + Vite 5.x SPA with TypeScript
+- Styling: Tailwind CSS 3.4.x with custom theme configuration
+- Testing: Vitest 1.6.x + Testing Library + MSW 2.2.x
+- Backend: Python ADK agent (frozen, not to be modified)
 
-**Best Practices Identified:**
+**Existing Patterns to Follow:**
+- Component structure: Functional components with hooks
+- Test organization: `__tests__/` folder mirroring `src/` structure
+- CSS approach: Tailwind utility classes + custom CSS variables
+- API client: Async functions with fetch, centralized error handling
 
-- Use AbortController for request timeout management in fetch calls
-- Implement optimistic UI updates with rollback on error
-- Use semantic HTML with proper ARIA attributes for accessibility
-- Configure Vite proxy for development CORS handling
+**Build Configuration:**
+- Vite with React plugin
+- TypeScript strict mode
+- PostCSS with Autoprefixer for Tailwind
 
-### 0.2.4 New File Requirements
+**Current Test Infrastructure:**
+- 103 tests passing across 7 test files
+- Unit tests for components and API
+- E2E smoke tests with component rendering verification
+- MSW for API mocking
 
-**Source Files to Create:**
+## 0.3 File Transformation Mapping
 
-| File Path | Purpose | Key Exports |
-|-----------|---------|-------------|
-| `frontend/src/main.tsx` | Application bootstrap | React DOM render |
-| `frontend/src/App.tsx` | Root component with state management | `App` component |
-| `frontend/src/types.ts` | TypeScript interfaces | `GeneratePlanInput`, `ADKResponse`, etc. |
-| `frontend/src/api/client.ts` | API communication layer | `createSession()`, `generatePlan()` |
-| `frontend/src/components/InputForm.tsx` | Form input handling | `InputForm` component |
-| `frontend/src/components/PlanView.tsx` | Plan rendering | `PlanView` component |
-| `frontend/src/components/RawOutput.tsx` | Raw JSON display | `RawOutput` component |
-| `frontend/src/components/LoadingState.tsx` | Loading skeleton | `LoadingState` component |
-| `frontend/src/components/ErrorDisplay.tsx` | Error presentation | `ErrorDisplay` component |
+### 0.3.1 File-by-File Execution Plan
 
-**Test Files to Create:**
+| Target File | Transformation | Source File/Reference | Purpose/Changes |
+|-------------|----------------|----------------------|-----------------|
+| `frontend/src/api/client.ts` | UPDATE | `frontend/src/api/client.ts` | Replace `POST /run` with two-step session flow: create session, then send message |
+| `frontend/src/components/InputForm.tsx` | UPDATE | `frontend/src/components/InputForm.tsx` | Remove Start Date, End Date, Preferences; rename Location to Zip Code; fix age validation |
+| `frontend/src/types.ts` | UPDATE | `frontend/src/types.ts` | Remove `startDate`, `endDate`, `preferences` from `GeneratePlanInput` interface |
+| `frontend/tailwind.config.cjs` | UPDATE | `frontend/tailwind.config.cjs` | Change primary color from #E07A5F to #1e3a5f |
+| `frontend/src/index.css` | UPDATE | `frontend/src/index.css` | Update CSS custom properties for dark blue theme |
+| `frontend/src/App.tsx` | UPDATE | `frontend/src/App.tsx` | Review and update any hardcoded color classes |
+| `frontend/src/__mocks__/handlers.ts` | UPDATE | `frontend/src/__mocks__/handlers.ts` | Add session creation and message handlers for two-step flow |
+| `frontend/src/__tests__/api/client.test.ts` | UPDATE | `frontend/src/__tests__/api/client.test.ts` | Add tests for session creation, unique session IDs, error handling |
+| `frontend/src/__tests__/components/InputForm.test.tsx` | UPDATE | `frontend/src/__tests__/components/InputForm.test.tsx` | Add tests for field removal, age parsing with spaces, optional fields |
+| `frontend/e2e/smoke.spec.tsx` | UPDATE | `frontend/e2e/smoke.spec.tsx` | Update to reflect new form structure (two fields only) |
+| `README.md` | UPDATE | `README.md` | Comprehensive rewrite with setup, running, API docs, troubleshooting |
 
-| File Path | Test Coverage Target |
-|-----------|---------------------|
-| `frontend/src/__tests__/setup.ts` | MSW server configuration, jest-dom setup |
-| `frontend/src/__tests__/api/client.test.ts` | API client functions (7 test cases) |
-| `frontend/src/__tests__/components/InputForm.test.tsx` | Form validation (9 test cases) |
-| `frontend/src/__tests__/components/PlanView.test.tsx` | Plan rendering (5 test cases) |
-| `frontend/src/__tests__/components/ErrorDisplay.test.tsx` | Error states (4 test cases) |
-| `frontend/src/__tests__/components/LoadingState.test.tsx` | Loading animation (3 test cases) |
-| `frontend/src/__tests__/components/RawOutput.test.tsx` | Collapsible behavior (4 test cases) |
-| `frontend/src/__mocks__/handlers.ts` | MSW request interceptors |
+### 0.3.2 Files to Modify Detail
 
-**Configuration Files to Create:**
+**`frontend/src/api/client.ts`** - Session-Based API Implementation:
+- Remove: `POST /run` endpoint call
+- Add: Session creation function with empty body to `/apps/WeekendPlanner/users/{userId}/sessions/{sessionId}`
+- Add: Message sending to same endpoint with `new_message` payload
+- Add: UUID generation using `crypto.randomUUID()`
+- Add: Error handling for session creation failure
+- Preserve: Base URL configuration from environment
 
-| File Path | Purpose |
-|-----------|---------|
-| `frontend/package.json` | Dependencies, scripts, project metadata |
-| `frontend/vite.config.ts` | Build tool configuration with proxy |
-| `frontend/vitest.config.ts` | Test runner configuration |
-| `frontend/tsconfig.json` | TypeScript compiler settings |
-| `frontend/tailwind.config.js` | CSS utility framework config |
-| `frontend/postcss.config.js` | CSS processing pipeline |
-| `frontend/index.html` | HTML template entry |
-| `frontend/.env.example` | Environment template |
+**`frontend/src/components/InputForm.tsx`** - Form Field Refactoring:
+- Delete: Start Date input, label, state, and validation
+- Delete: End Date input, label, state, and validation
+- Delete: Preferences input, label, state, and validation
+- Rename: "Location" label to "Zip Code"
+- Update: Age parsing function per user specification
+- Update: Form validation to require only Zip Code
+- Update: Submit handler to omit removed fields
 
-**Documentation Files to Create:**
+**`frontend/src/types.ts`** - Interface Updates:
+- Remove: `startDate: string` property
+- Remove: `endDate: string` property
+- Remove: `preferences: string` property
+- Keep: `location` property (renamed semantically to zip code)
+- Keep: `kidsAges: number[]` property
 
-| File Path | Target Audience | Content Type |
-|-----------|----------------|--------------|
-| `frontend/README.md` | Developers | Setup and development guide |
-| `frontend/docs/README.md` | End users | Documentation index |
-| `frontend/docs/getting-started.md` | End users | Quick start guide |
-| `frontend/docs/user-guide.md` | End users | Feature walkthrough |
-| `frontend/docs/troubleshooting.md` | End users | Problem resolution |
-| `frontend/docs/images/*.txt` | Documentation | Screenshot placeholders |
+**`frontend/tailwind.config.cjs`** - Color Theme:
+- Change: `primary` color from `#E07A5F` (salmon) to `#1e3a5f` (dark blue)
+- Ensure: All color utilities derive from updated primary
 
----
+**`frontend/src/index.css`** - CSS Variables:
+- Update: `--color-primary` to `#1e3a5f`
+- Update: `--color-text` to appropriate contrast values
+- Update: Any other salmon/coral references
 
-## 0.3 Dependency Inventory
+**`frontend/src/__mocks__/handlers.ts`** - MSW Handlers:
+- Add: Handler for `POST /apps/WeekendPlanner/users/:userId/sessions/:sessionId`
+- Add: Logic to differentiate empty body (session creation) vs `new_message` body (plan generation)
+- Return: Appropriate mock responses for both scenarios
 
-### 0.3.1 Private and Public Packages
+**`frontend/src/__tests__/api/client.test.ts`** - API Tests:
+- Add: Test for session creation before plan request
+- Add: Test for correct endpoint usage
+- Add: Test for unique session ID generation
+- Add: Tests for error handling on session creation failure
+- Add: Test for correct `new_message` payload format
 
-**Runtime Dependencies:**
+**`frontend/src/__tests__/components/InputForm.test.tsx`** - Form Tests:
+- Add: Tests verifying Start Date, End Date, Preferences fields are NOT rendered
+- Add: Tests for age parsing with various whitespace patterns
+- Add: Tests for age validation edge cases (0, 120, negative, decimals)
+- Add: Tests for form submission with only Zip Code
+- Update: Existing tests to match new form structure
+
+**`frontend/e2e/smoke.spec.tsx`** - E2E Tests:
+- Update: Form interaction tests to use only Zip Code and Kids Ages
+- Remove: Tests referencing removed fields
+- Add: Validation for new form structure
+
+**`README.md`** - Documentation:
+- Add: Prerequisites section (Node.js >= 18.x, Python >= 3.9, ADK CLI)
+- Add: Environment setup with `.env` configuration
+- Add: Installation instructions for frontend and backend
+- Add: Running instructions with terminal commands
+- Add: API endpoints documentation
+- Add: Testing instructions
+- Add: Troubleshooting table
+
+### 0.3.3 Configuration and Documentation Updates
+
+**Configuration Changes:**
+
+| Config File | Settings to Update | Impact |
+|-------------|-------------------|--------|
+| `frontend/tailwind.config.cjs` | `theme.extend.colors.primary` | All UI using `bg-primary`, `text-primary`, etc. |
+| `frontend/src/index.css` | CSS custom properties | Root-level color variables |
+| `frontend/.env.example` | (verify) API URL | Environment configuration documentation |
+
+**Documentation Updates:**
+
+| Doc File | Sections to Add/Update |
+|----------|----------------------|
+| `README.md` | Prerequisites, Environment, Installation, Running, API, Testing, Troubleshooting |
+| `frontend/docs/USER_GUIDE.md` | Update form field descriptions if exists |
+
+### 0.3.4 Cross-File Dependencies
+
+**Import/Reference Updates:**
+- `InputForm.tsx` → `types.ts`: Must match updated `GeneratePlanInput` interface
+- `App.tsx` → `api/client.ts`: `generatePlan` function signature unchanged (internal implementation changes)
+- `client.test.ts` → `handlers.ts`: MSW handlers must match test expectations
+
+**Configuration Sync Requirements:**
+- Tailwind config colors must align with CSS variable definitions
+- MSW handler endpoints must match `client.ts` API calls
+- Test assertions must reflect actual component behavior
+
+**Documentation Consistency:**
+- README API documentation must match `client.ts` implementation
+- Troubleshooting errors must correspond to actual error messages
+
+## 0.4 Dependency Inventory
+
+### 0.4.1 Key Private and Public Packages
 
 | Registry | Package Name | Version | Purpose |
 |----------|--------------|---------|---------|
-| npm | react | 18.2.0 | UI library - functional components and hooks |
+| npm | react | 18.2.0 | UI component framework |
 | npm | react-dom | 18.2.0 | React DOM rendering |
-| npm | tailwindcss | ^3.4.0 | Utility-first CSS framework |
-| npm | autoprefixer | ^10.4.0 | PostCSS vendor prefixing |
-| npm | postcss | ^8.4.0 | CSS transformation tool |
-
-**Development Dependencies:**
-
-| Registry | Package Name | Version | Purpose |
-|----------|--------------|---------|---------|
-| npm | vite | ^5.4.0 | Build tool and dev server |
-| npm | @vitejs/plugin-react | ^4.2.0 | Vite React plugin with Fast Refresh |
-| npm | typescript | ^5.3.0 | TypeScript compiler |
-| npm | @types/react | ^18.2.0 | React TypeScript definitions |
-| npm | @types/react-dom | ^18.2.0 | React DOM TypeScript definitions |
-| npm | vitest | ^1.6.0 | Test runner framework |
-| npm | @vitest/coverage-v8 | ^1.6.0 | Code coverage provider |
-| npm | @testing-library/react | ^14.2.0 | React component testing utilities |
-| npm | @testing-library/jest-dom | ^6.4.0 | DOM assertion matchers |
+| npm | vite | ^5.0.0 | Build tool and dev server |
+| npm | vitest | ^1.6.0 | Test runner |
+| npm | @testing-library/react | ^14.2.0 | React testing utilities |
 | npm | @testing-library/user-event | ^14.5.0 | User interaction simulation |
-| npm | jsdom | ^24.0.0 | DOM implementation for testing |
-| npm | msw | ^2.2.0 | API mocking service worker |
+| npm | @testing-library/jest-dom | ^6.4.0 | DOM matchers for testing |
+| npm | msw | ^2.2.0 | API mocking for tests |
+| npm | tailwindcss | ^3.4.0 | Utility-first CSS framework |
+| npm | typescript | ^5.0.0 | TypeScript compiler |
+| npm | jsdom | ^24.0.0 | DOM simulation for tests |
+| pip | google-adk | latest | Google Agent Development Kit (backend) |
 
-**Build Tool Chain:**
+### 0.4.2 Dependency Updates
 
-| Tool | Version | Configuration File |
-|------|---------|-------------------|
-| Node.js | 20.x LTS | Runtime requirement |
-| npm | 10.x+ | Package manager |
-| Vite | 5.x | `vite.config.ts` |
-| TypeScript | 5.x | `tsconfig.json` |
-| PostCSS | 8.x | `postcss.config.js` |
+**New Dependencies to Add:**
+- None required. All necessary packages are already present in `package.json`.
 
-### 0.3.2 Package.json Configuration
+**Dependencies to Update:**
+- None required. Current versions are compatible with implementation needs.
 
-**Complete Dependencies Block:**
+**Dependencies to Remove:**
+- None required.
 
-```json
-{
-  "name": "weekend-planner-frontend",
-  "private": true,
-  "version": "0.1.0",
-  "type": "module",
-  "scripts": {
-    "dev": "vite",
-    "build": "tsc && vite build",
-    "preview": "vite preview",
-    "test": "vitest run",
-    "test:watch": "vitest",
-    "test:coverage": "vitest run --coverage",
-    "test:ui": "vitest --ui",
-    "lint": "tsc --noEmit"
-  },
-  "dependencies": {
-    "react": "18.2.0",
-    "react-dom": "18.2.0"
-  },
-  "devDependencies": {
-    "@testing-library/jest-dom": "^6.4.0",
-    "@testing-library/react": "^14.2.0",
-    "@testing-library/user-event": "^14.5.0",
-    "@types/react": "^18.2.0",
-    "@types/react-dom": "^18.2.0",
-    "@vitejs/plugin-react": "^4.2.0",
-    "@vitest/coverage-v8": "^1.6.0",
-    "autoprefixer": "^10.4.0",
-    "jsdom": "^24.0.0",
-    "msw": "^2.2.0",
-    "postcss": "^8.4.0",
-    "tailwindcss": "^3.4.0",
-    "typescript": "^5.3.0",
-    "vite": "^5.4.0",
-    "vitest": "^1.6.0"
-  }
-}
-```
+### 0.4.3 Import/Reference Updates
 
-### 0.3.3 Dependency Updates
+**Files Requiring Import Updates:**
 
-**Import Structure for Source Files:**
+| File | Current Import | Updated Import | Reason |
+|------|----------------|----------------|--------|
+| `frontend/src/api/client.ts` | N/A | N/A | No new imports needed; uses native `crypto.randomUUID()` |
+| `frontend/src/components/InputForm.tsx` | Full interface | Reduced interface | Removed fields from `GeneratePlanInput` |
 
-Files requiring React imports:
-- `frontend/src/main.tsx` - `import React from 'react'`, `import ReactDOM from 'react-dom/client'`
-- `frontend/src/App.tsx` - `import { useState, useCallback } from 'react'`
-- `frontend/src/components/*.tsx` - React hooks and component imports
+**Import Transformation Rules:**
 
-Files requiring API client imports:
-- `frontend/src/App.tsx` - `import { createSession, generatePlan } from './api/client'`
-- `frontend/src/__tests__/api/client.test.ts` - `import { createSession, generatePlan } from '../../api/client'`
-
-Files requiring type imports:
-- `frontend/src/api/client.ts` - `import type { GeneratePlanInput, ADKResponse, GeneratePlanResult } from '../types'`
-- `frontend/src/components/*.tsx` - Type imports from `../types`
-
-**Test File Import Structure:**
-
+For `types.ts` interface changes:
 ```typescript
-// frontend/src/__tests__/setup.ts
-import '@testing-library/jest-dom';
-import { server } from '../__mocks__/handlers';
-
-// frontend/src/__tests__/components/*.test.tsx
-import { render, screen, fireEvent } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
-import { vi } from 'vitest';
-```
-
-**MSW Handler Import Structure:**
-
-```typescript
-// frontend/src/__mocks__/handlers.ts
-import { http, HttpResponse } from 'msw';
-import { setupServer } from 'msw/node';
-```
-
-### 0.3.4 External Reference Updates
-
-**Configuration File Dependencies:**
-
-| File | External References |
-|------|---------------------|
-| `vite.config.ts` | `@vitejs/plugin-react` plugin import |
-| `vitest.config.ts` | `@vitejs/plugin-react`, `vitest/config` imports |
-| `tailwind.config.js` | Content glob patterns for Tailwind purging |
-| `postcss.config.js` | `tailwindcss`, `autoprefixer` plugin references |
-| `tsconfig.json` | Path aliases, module resolution settings |
-
-**Root Repository Updates:**
-
-| File | Update Required |
-|------|-----------------|
-| `README.md` | Add "Frontend Setup" section with instructions |
-| `CHANGELOG.md` | Add frontend release entry under `[Unreleased]` |
-
----
-
-## 0.4 Integration Analysis
-
-### 0.4.1 Existing Code Touchpoints
-
-**Repository Root Files Requiring Modification:**
-
-| File | Modification Type | Location | Changes Required |
-|------|------------------|----------|------------------|
-| `README.md` | MODIFY | After "Usage" section | Add "Frontend Setup" section with npm commands |
-| `CHANGELOG.md` | MODIFY | `[Unreleased]` section | Add frontend feature entry |
-
-**README.md Modification Details:**
-
-Add new section after existing "Usage" section:
-
-```
-## Frontend Application
-
-#### Prerequisites
-- Node.js 20.x LTS
-
-#### Setup
-
-cd frontend
-npm install
-npm run dev
-
-#### Running Full Stack
-
-Terminal 1: adk web (backend at :8000)
-Terminal 2: cd frontend && npm run dev (frontend at :5173)
-```
-
-**CHANGELOG.md Modification Details:**
-
-Add to `[Unreleased]` Planned section:
-
-```
-### Added
-- React frontend application for Weekend Planner
-- User input form with date and location validation
-- Plan display with collapsible raw output
-- Comprehensive test suite with 80%+ coverage
-- End-user documentation in `/docs` folder
-```
-
-### 0.4.2 Backend API Contract Integration
-
-**Session Creation Endpoint:**
-
-| Attribute | Value |
-|-----------|-------|
-| Method | POST |
-| Path | `/apps/WeekendPlanner/users/{user_id}/sessions/{session_id}` |
-| Content-Type | `application/json` |
-| Request Body | `{}` (empty object) |
-| Response | Session confirmation |
-| Frontend Usage | Call once at application start or on first generation |
-
-**Agent Execution Endpoint:**
-
-| Attribute | Value |
-|-----------|-------|
-| Method | POST |
-| Path | `/run` |
-| Content-Type | `application/json` |
-| Timeout | 30 seconds |
-| Request Schema | See below |
-
-Request Body Structure:
-```typescript
-{
-  app_name: "WeekendPlanner",
-  user_id: string,
-  session_id: string,
-  new_message: {
-    role: "user",
-    parts: [{ text: string }]
-  },
-  streaming: false
-}
-```
-
-**Response Structure Mapping:**
-
-```typescript
-// Backend returns array of ADK events
-type ADKResponse = ADKEvent[];
-
-interface ADKEvent {
-  id: string;           // Event unique identifier
-  timestamp: string;    // ISO8601 timestamp
-  author: string;       // "model" for AI responses
-  content?: {
-    parts: Array<{ text?: string }>;
-    role: "model" | "user" | string;
-  };
-}
-```
-
-### 0.4.3 Component Integration Architecture
-
-**State Management Flow:**
-
-```mermaid
-stateDiagram-v2
-    [*] --> Idle
-    Idle --> Loading: Submit Form
-    Loading --> Success: API Response OK
-    Loading --> Error: API Error/Timeout
-    Success --> Idle: Reset/New Query
-    Error --> Idle: Retry/Reset
-    Success --> Success: Toggle Raw Output
-```
-
-**Component Communication:**
-
-| Parent | Child | Data Flow | Callback |
-|--------|-------|-----------|----------|
-| `App` | `InputForm` | formData state | `onSubmit(input)` |
-| `App` | `LoadingState` | isLoading boolean | - |
-| `App` | `ErrorDisplay` | error object | `onRetry()` |
-| `App` | `PlanView` | result object | - |
-| `PlanView` | `RawOutput` | rawResponse data | - |
-
-**API Client Integration:**
-
-```mermaid
-sequenceDiagram
-    participant User
-    participant InputForm
-    participant App
-    participant APIClient
-    participant Backend
-    
-    User->>InputForm: Fill form and submit
-    InputForm->>App: onSubmit(GeneratePlanInput)
-    App->>App: setIsLoading(true)
-    App->>APIClient: generatePlan(input)
-    APIClient->>Backend: POST /run
-    Backend-->>APIClient: ADKResponse[]
-    APIClient->>APIClient: Parse response
-    APIClient-->>App: GeneratePlanResult
-    App->>App: setIsLoading(false)
-    App->>App: setResult(result)
-```
-
-### 0.4.4 Error Handling Integration
-
-**Error Mapping Table:**
-
-| Error Scenario | Detection Method | User Message | Technical Detail |
-|----------------|------------------|--------------|------------------|
-| Network failure | `fetch` throws | "Couldn't reach the backend. Make sure the ADK server is running with `adk web`" | Connection refused |
-| Request timeout | AbortController signal | "Request timed out. Please try again." | 30s timeout exceeded |
-| 400 Bad Request | `response.status === 400` | "Invalid request: [description]" | Status code + body |
-| 500 Server Error | `response.status >= 500` | "Something went wrong on the server. Please try again." | Status code |
-| CORS blocked | TypeError from fetch | "Connection blocked. See README for proxy setup." | CORS policy |
-| Malformed JSON | JSON.parse throws | "Received an unexpected response format" | Parse error |
-
-**Form Validation Integration:**
-
-| Validation | Field | Rule | Error Message |
-|------------|-------|------|---------------|
-| Required | Location | Non-empty string | "Location is required" |
-| Required | Start Date | Valid date format | "Start date is required" |
-| Required | End Date | Valid date format | "End date is required" |
-| Date Order | End Date | `endDate >= startDate` | "End date must be on or after start date" |
-| Format | Kids Ages | Comma-separated integers | "Enter ages as numbers separated by commas" |
-
-### 0.4.5 CORS and Proxy Configuration
-
-**Development Environment:**
-
-The Vite development server must proxy API requests to avoid CORS issues:
-
-```typescript
-// vite.config.ts proxy configuration
-server: {
-  proxy: {
-    '/api': {
-      target: 'http://localhost:8000',
-      changeOrigin: true,
-      rewrite: (path) => path.replace(/^\/api/, '')
-    }
-  }
-}
-```
-
-**Alternative Direct Connection:**
-
-If proxy is not used, the backend ADK server must allow CORS from `http://localhost:5173`. The frontend `.env.example` should document:
-
-```
-VITE_API_BASE_URL=http://localhost:8000
-```
-
----
-
-## 0.5 Technical Implementation
-
-### 0.5.1 File-by-File Execution Plan
-
-**CRITICAL: Every file listed here MUST be created or modified as specified.**
-
-**Group 1 - Configuration Files (Create First):**
-
-| Action | File Path | Purpose |
-|--------|-----------|---------|
-| CREATE | `frontend/package.json` | Project manifest with dependencies and scripts |
-| CREATE | `frontend/tsconfig.json` | TypeScript compiler with strict mode enabled |
-| CREATE | `frontend/vite.config.ts` | Vite build configuration with React plugin and proxy |
-| CREATE | `frontend/vitest.config.ts` | Vitest test runner with jsdom environment |
-| CREATE | `frontend/tailwind.config.js` | Tailwind CSS content paths and theme extensions |
-| CREATE | `frontend/postcss.config.js` | PostCSS plugins for Tailwind processing |
-| CREATE | `frontend/index.html` | HTML entry point with root div |
-| CREATE | `frontend/.env.example` | Environment variable documentation |
-
-**Group 2 - Core Application Files:**
-
-| Action | File Path | Purpose |
-|--------|-----------|---------|
-| CREATE | `frontend/src/main.tsx` | React 18 createRoot initialization |
-| CREATE | `frontend/src/App.tsx` | Root component with state management |
-| CREATE | `frontend/src/index.css` | Tailwind directives and global styles |
-| CREATE | `frontend/src/types.ts` | TypeScript interfaces for ADK integration |
-
-**Group 3 - API Layer:**
-
-| Action | File Path | Purpose |
-|--------|-----------|---------|
-| CREATE | `frontend/src/api/client.ts` | ADK API client with session and run endpoints |
-
-**Group 4 - UI Components:**
-
-| Action | File Path | Purpose |
-|--------|-----------|---------|
-| CREATE | `frontend/src/components/InputForm.tsx` | Form with location, dates, ages, preferences |
-| CREATE | `frontend/src/components/PlanView.tsx` | Plan display with activity cards |
-| CREATE | `frontend/src/components/RawOutput.tsx` | Collapsible JSON viewer |
-| CREATE | `frontend/src/components/LoadingState.tsx` | Skeleton animation with aria-busy |
-| CREATE | `frontend/src/components/ErrorDisplay.tsx` | Error message with expandable details |
-
-**Group 5 - Test Infrastructure:**
-
-| Action | File Path | Purpose |
-|--------|-----------|---------|
-| CREATE | `frontend/src/__tests__/setup.ts` | MSW server and jest-dom configuration |
-| CREATE | `frontend/src/__mocks__/handlers.ts` | MSW request handlers for ADK endpoints |
-
-**Group 6 - Unit Tests:**
-
-| Action | File Path | Test Count |
-|--------|-----------|------------|
-| CREATE | `frontend/src/__tests__/api/client.test.ts` | 7 tests |
-| CREATE | `frontend/src/__tests__/components/InputForm.test.tsx` | 9 tests |
-| CREATE | `frontend/src/__tests__/components/PlanView.test.tsx` | 5 tests |
-| CREATE | `frontend/src/__tests__/components/ErrorDisplay.test.tsx` | 4 tests |
-| CREATE | `frontend/src/__tests__/components/LoadingState.test.tsx` | 3 tests |
-| CREATE | `frontend/src/__tests__/components/RawOutput.test.tsx` | 4 tests |
-
-**Group 7 - E2E Tests:**
-
-| Action | File Path | Purpose |
-|--------|-----------|---------|
-| CREATE | `frontend/e2e/smoke.spec.ts` | End-to-end smoke test specification |
-
-**Group 8 - Documentation:**
-
-| Action | File Path | Purpose |
-|--------|-----------|---------|
-| CREATE | `frontend/README.md` | Developer setup and build instructions |
-| CREATE | `frontend/docs/README.md` | Documentation index |
-| CREATE | `frontend/docs/getting-started.md` | Quick start for end users |
-| CREATE | `frontend/docs/user-guide.md` | Complete feature walkthrough |
-| CREATE | `frontend/docs/troubleshooting.md` | Problem resolution guide |
-| CREATE | `frontend/docs/images/*.txt` | 8 screenshot placeholder files |
-
-**Group 9 - Root Repository Updates:**
-
-| Action | File Path | Purpose |
-|--------|-----------|---------|
-| MODIFY | `README.md` | Add frontend setup section |
-| MODIFY | `CHANGELOG.md` | Add frontend release notes |
-
-### 0.5.2 Implementation Approach per File
-
-**Configuration Implementation:**
-
-- `package.json`: Define exact versions matching user specification, configure scripts for dev/build/test
-- `tsconfig.json`: Enable strict mode, configure JSX for React, set module resolution to bundler
-- `vite.config.ts`: Register React plugin, configure proxy for `/api` to backend
-- `vitest.config.ts`: Set jsdom environment, configure setup file, enable coverage
-- `tailwind.config.js`: Set content paths to `./src/**/*.{ts,tsx}`, extend theme with color palette
-- `postcss.config.js`: Register tailwindcss and autoprefixer plugins
-
-**Type Definitions Implementation:**
-
-```typescript
-// frontend/src/types.ts - Core interfaces
-export interface GeneratePlanInput {
+// Old GeneratePlanInput interface
+interface GeneratePlanInput {
   location: string;
-  startDate: string;   // YYYY-MM-DD
-  endDate: string;     // YYYY-MM-DD
-  kidsAges?: string;
-  preferences?: string;
+  startDate: string;
+  endDate: string;
+  preferences: string;
+  kidsAges: number[];
+}
+
+// New GeneratePlanInput interface
+interface GeneratePlanInput {
+  location: string;  // Semantically: Zip Code
+  kidsAges: number[];
 }
 ```
 
-**API Client Implementation:**
+**Apply to:**
+- `frontend/src/types.ts` - Define interface
+- `frontend/src/components/InputForm.tsx` - Use interface
+- `frontend/src/api/client.ts` - Use interface in API call
 
-- Implement `createSession()` with POST to session endpoint
-- Implement `generatePlan()` with 30-second timeout using AbortController
-- Extract plan text from ADKResponse event array
-- Return typed `GeneratePlanResult` with success/error states
+## 0.5 Implementation Design
 
-**Component Implementation Patterns:**
+### 0.5.1 Technical Approach
 
-- Use controlled form inputs with useState hooks
-- Implement form validation with inline error messages
-- Use Tailwind utility classes for styling per design specs
-- Add aria attributes for accessibility compliance
-- Implement responsive breakpoints for mobile/desktop layouts
+**Primary Objectives with Implementation Approach:**
 
-**Test Implementation Approach:**
+1. **Fix Session Management API** by refactoring `client.ts` to implement two-step ADK session flow
+   - Generate client-side UUID for session identification
+   - Create session with empty body POST before sending plan request
+   - Send plan request with `new_message` payload to same session endpoint
+   - Implement proper error handling for both steps
 
-- Configure MSW server in setup.ts with handlers
-- Use render + screen queries from Testing Library
-- Simulate user interactions with userEvent
-- Assert on DOM state and callback invocations
-- Mock API responses for success and error scenarios
+2. **Fix Kids Ages Validation** by rewriting parsing logic in `InputForm.tsx`
+   - Split input by comma and trim whitespace from each segment
+   - Parse as integers and validate 0 < age < 120
+   - Return empty array for empty input (optional field)
+   - Return null for invalid input to trigger form validation error
 
-### 0.5.3 Component Specifications
+3. **Remove Unused Form Fields** by deleting UI elements and state from `InputForm.tsx`
+   - Remove Start Date, End Date, Preferences inputs and labels
+   - Update state management to exclude removed fields
+   - Update TypeScript interface to match
 
-**Color Palette Implementation:**
+4. **Achieve WCAG AA Compliance** by updating color scheme throughout
+   - Update Tailwind theme primary color
+   - Update CSS custom properties
+   - Review all components for hardcoded color references
 
-| Token | Hex Value | Tailwind Usage |
-|-------|-----------|----------------|
-| Primary (CTAs) | `#E07A5F` | `bg-[#E07A5F]`, `text-[#E07A5F]` |
-| Background | `#F4F1DE` | `bg-[#F4F1DE]` |
-| Text | `#3D405B` | `text-[#3D405B]` |
-| Success | `#81B29A` | `bg-[#81B29A]`, `text-[#81B29A]` |
-| Error | `#E63946` | `bg-[#E63946]`, `text-[#E63946]` |
+**Logical Implementation Flow:**
 
-**Layout Implementation:**
+- **First**, establish the API foundation by implementing the session-based flow in `client.ts` and updating MSW handlers
+- **Next**, refactor the form component to remove unused fields and fix validation
+- **Then**, update the type definitions to match the new form structure
+- **Following that**, update all tests to validate the new behavior
+- **Subsequently**, update the color scheme across configuration and styles
+- **Finally**, create comprehensive documentation in README.md
 
-| Breakpoint | Layout | Max Width |
-|------------|--------|-----------|
-| Mobile (<768px) | Single column stacked | 100% |
-| Desktop (≥768px) | Two-column (40% / 60%) | 1200px |
+### 0.5.2 Component Impact Analysis
 
-**Component States:**
+**Direct Modifications Required:**
 
-| Component | States | Visual Treatment |
-|-----------|--------|------------------|
-| InputForm | default, invalid, submitting | Border colors, disabled state |
-| PlanView | empty, populated | Placeholder vs. content |
-| LoadingState | active | Pulse animation, skeleton cards |
-| ErrorDisplay | collapsed, expanded | Accordion for technical details |
-| RawOutput | collapsed, expanded | Toggle visibility of JSON |
+| Component | Modification | Capability Enabled |
+|-----------|-------------|-------------------|
+| `client.ts` | Refactor `generatePlan()` | Correct ADK session API usage |
+| `InputForm.tsx` | Remove fields, fix validation | Clean two-field form with proper validation |
+| `types.ts` | Update interface | Type safety for new form structure |
+| `tailwind.config.cjs` | Update colors | WCAG compliant color scheme |
+| `index.css` | Update CSS variables | Consistent styling |
+| `handlers.ts` | Add session handlers | Test support for new API |
 
-### 0.5.4 Test Case Specifications
+**Indirect Impacts and Dependencies:**
 
-**API Client Tests (7 cases):**
+| Component | Update Required | Reason |
+|-----------|-----------------|--------|
+| `App.tsx` | Review color classes | May have hardcoded salmon references |
+| `client.test.ts` | Update assertions | Tests must match new API behavior |
+| `InputForm.test.tsx` | Update test cases | Tests must match new form structure |
+| `smoke.spec.tsx` | Update E2E tests | E2E must use new form fields |
 
-1. `generatePlan() returns success with valid ADK response`
-2. `generatePlan() handles 30-second timeout`
-3. `generatePlan() handles 400 Bad Request with structured error`
-4. `generatePlan() handles 500 Internal Server Error`
-5. `generatePlan() handles malformed JSON response`
-6. `createSession() creates session successfully`
-7. `createSession() handles session creation failure`
+**New Components Introduction:**
 
-**InputForm Tests (9 cases):**
+No new components required. All changes are modifications to existing files.
 
-1. `Renders location, start date, end date fields`
-2. `Renders optional kids ages and preferences fields`
-3. `Generate button disabled when location empty`
-4. `Generate button disabled when dates missing`
-5. `Shows inline error when end date < start date`
-6. `Generate button enabled when required fields valid`
-7. `Calls onSubmit with correct GeneratePlanInput structure`
-8. `Reset button clears all field values`
-9. `Kids ages accepts "3, 7, 12" format with spaces`
+### 0.5.3 User-Provided Examples Integration
 
-**PlanView Tests (5 cases):**
+**Age Parsing Implementation:**
 
-1. `Renders plan text content from planText prop`
-2. `Displays structured activity cards when data parseable`
-3. `Handles unstructured text display gracefully`
-4. `Raw Output section collapsed by default`
-5. `Raw Output expands on toggle click`
+The user's example of age parsing will be implemented in `InputForm.tsx` as the `parseKidsAges` function:
 
-**ErrorDisplay Tests (4 cases):**
+```typescript
+function parseKidsAges(input: string): number[] | null {
+  if (!input.trim()) return [];
+  const ages = input.split(',').map(s => s.trim());
+  const result: number[] = [];
+  for (const age of ages) {
+    const num = parseInt(age, 10);
+    if (isNaN(num) || age !== String(num) || num <= 0 || num >= 120) {
+      return null;
+    }
+    result.push(num);
+  }
+  return result;
+}
+```
 
-1. `Displays user-friendly error message`
-2. `Shows expandable "Technical Details" section`
-3. `Renders status code in technical details`
-4. `Shows raw body content when expanded`
+**Session Flow Implementation:**
 
-**LoadingState Tests (3 cases):**
+The user's example of session flow will be implemented in `client.ts` as the `generatePlan` function:
 
-1. `Renders skeleton/pulse animation elements`
-2. `Displays "Creating your perfect weekend..." message`
-3. `Has aria-busy="true" for accessibility`
+```typescript
+export async function generatePlan(input: GeneratePlanInput) {
+  const sessionId = crypto.randomUUID();
+  const userId = 'user-1';
+  const endpoint = `${API_BASE}/apps/WeekendPlanner/users/${userId}/sessions/${sessionId}`;
+  
+  // Step 1: Create session
+  await fetch(endpoint, { method: 'POST', body: '{}' });
+  
+  // Step 2: Send message
+  return fetch(endpoint, {
+    method: 'POST',
+    body: JSON.stringify({
+      new_message: { role: 'user', parts: [{ text: '...' }] }
+    })
+  });
+}
+```
 
-**RawOutput Tests (4 cases):**
+### 0.5.4 Critical Implementation Details
 
-1. `Renders collapsed by default`
-2. `Expands to show content on click`
-3. `Displays JSON in preformatted block`
-4. `Collapses when clicked again`
+**Design Patterns Employed:**
 
----
+- **Two-Phase API Pattern**: Session creation followed by message sending
+- **Client-Side ID Generation**: UUID creation on frontend for session tracking
+- **Graceful Degradation**: Empty optional field handling
+- **Fail-Fast Validation**: Return null on first invalid input
+
+**Key Algorithms:**
+
+- **Age Parsing**: Split → Trim → Parse → Validate → Collect
+- **Session Management**: Generate ID → Create Session → Send Message → Handle Response
+
+**Integration Strategies:**
+
+- MSW intercepts at network layer for seamless test/production parity
+- Tailwind theme propagates colors through utility class system
+- TypeScript interfaces enforce contract between components
+
+**Data Flow Modifications:**
+
+```
+User Input → InputForm (validation) → generatePlan() → 
+  → Session Creation (ADK) → Message Send (ADK) → 
+  → Response Handling → UI Update
+```
+
+**Error Handling:**
+
+- Session creation failure: Abort and display user error
+- Plan generation failure: Display error with retry option
+- Validation failure: Inline form error messages
+
+**Edge Case Considerations:**
+
+- Empty Kids Ages: Valid (returns empty array)
+- Whitespace-only input: Invalid
+- Age boundary values: 0 (invalid), 1 (valid), 119 (valid), 120 (invalid)
+- Network timeout: Show error state
+- Invalid session: Generate new session ID and retry
 
 ## 0.6 Scope Boundaries
 
 ### 0.6.1 Exhaustively In Scope
 
-**Frontend Source Files (All patterns with trailing wildcards):**
-
-| Pattern | File Count | Purpose |
-|---------|------------|---------|
-| `frontend/src/**/*.tsx` | 6 | React components (main, App, 5 components) |
-| `frontend/src/**/*.ts` | 2 | TypeScript modules (types, api/client) |
-| `frontend/src/**/*.css` | 1 | Stylesheet (index.css) |
-
-**Frontend Test Files:**
-
-| Pattern | File Count | Purpose |
-|---------|------------|---------|
-| `frontend/src/__tests__/**/*.ts` | 1 | Test setup |
-| `frontend/src/__tests__/**/*.tsx` | 5 | Component tests |
-| `frontend/src/__mocks__/**/*.ts` | 1 | MSW handlers |
-| `frontend/e2e/**/*.ts` | 1 | E2E specifications |
-
-**Frontend Configuration Files:**
-
-| Path | Purpose |
-|------|---------|
-| `frontend/package.json` | npm project manifest |
-| `frontend/tsconfig.json` | TypeScript configuration |
-| `frontend/vite.config.ts` | Vite build tool settings |
-| `frontend/vitest.config.ts` | Vitest test runner settings |
-| `frontend/tailwind.config.js` | Tailwind CSS configuration |
-| `frontend/postcss.config.js` | PostCSS plugin configuration |
-| `frontend/index.html` | HTML entry template |
-| `frontend/.env.example` | Environment variable template |
-
-**Frontend Documentation Files:**
-
-| Path | Purpose |
-|------|---------|
-| `frontend/README.md` | Developer documentation |
-| `frontend/docs/README.md` | User documentation index |
-| `frontend/docs/getting-started.md` | Quick start guide |
-| `frontend/docs/user-guide.md` | Feature walkthrough |
-| `frontend/docs/troubleshooting.md` | Problem resolution |
-| `frontend/docs/images/*.txt` | Screenshot placeholders (8 files) |
-
-**Root Repository Files to Modify:**
-
-| Path | Modification Scope |
-|------|-------------------|
-| `README.md` | Add ~20 lines for frontend setup |
-| `CHANGELOG.md` | Add ~10 lines under [Unreleased] |
-
-### 0.6.2 Complete File Inventory
-
-**Total New Files to Create: 37**
-
-| Category | Count | Details |
-|----------|-------|---------|
-| Configuration | 8 | package.json, tsconfig.json, vite.config.ts, vitest.config.ts, tailwind.config.js, postcss.config.js, index.html, .env.example |
-| Source Code | 8 | main.tsx, App.tsx, index.css, types.ts, api/client.ts, 5 components |
-| Tests | 8 | setup.ts, handlers.ts, 5 component tests, client.test.ts, smoke.spec.ts |
-| Documentation | 13 | 5 markdown files, 8 image placeholders |
-
-**Existing Files to Modify: 2**
-
-| File | Lines Added | Type of Change |
-|------|-------------|----------------|
-| `README.md` | ~20 | Add new section |
-| `CHANGELOG.md` | ~10 | Add release notes |
-
-### 0.6.3 Explicitly Out of Scope
-
-**Backend Code (NEVER Modify):**
-
-| Path | Reason |
-|------|--------|
-| `WeekendPlanner/**/*` | Preservation requirement - backend immutable |
-| `WeekendPlanner/__init__.py` | Agent package initializer |
-| `WeekendPlanner/agent.py` | Agent pipeline definition |
-| `requirements.txt` | Python dependencies |
-
-**Unrelated Repository Files (DO NOT Modify):**
-
-| Path | Reason |
-|------|--------|
-| `CONTRIBUTING.md` | Not related to frontend feature |
-| `DEPLOYMENT.md` | Backend deployment documentation |
-| `LICENSE` | Legal document unchanged |
-| `.gitattributes` | Git configuration unchanged |
-| `.env.example` (root) | Backend environment template |
-
-**Features NOT in Scope:**
-
-| Feature | Reason for Exclusion |
-|---------|---------------------|
-| User authentication | Not specified in requirements |
-| Database storage | Frontend is stateless |
-| Multi-page routing | Single-page application only |
-| Backend API modifications | Preservation requirement |
-| Performance optimizations | Beyond feature requirements |
-| Additional UI features | Not specified in requirements |
-| i18n/localization | Not specified in requirements |
-| PWA capabilities | Not specified in requirements |
-| Server-side rendering | Vite SPA mode only |
-| State management libraries | React useState sufficient |
-
-### 0.6.4 Boundary Validation Checklist
-
-**Pre-Implementation Validation:**
-
-- [ ] All new files created within `frontend/` directory
-- [ ] No files modified in `WeekendPlanner/` directory
-- [ ] Backend API contract unchanged
-- [ ] Technology versions match specification exactly
-- [ ] File structure matches specified layout exactly
-
-**Post-Implementation Validation:**
-
-- [ ] `npm install` completes without errors
-- [ ] `npm run build` produces zero errors
-- [ ] `npm run test` achieves 80%+ coverage
-- [ ] All 32 specified test cases pass
-- [ ] Documentation readable without code knowledge
-- [ ] UI connects to backend without CORS errors
-
-### 0.6.5 File Creation Order
-
-**Phase 1 - Infrastructure (No Dependencies):**
-1. `frontend/package.json`
-2. `frontend/tsconfig.json`
-3. `frontend/vite.config.ts`
-4. `frontend/vitest.config.ts`
-5. `frontend/tailwind.config.js`
-6. `frontend/postcss.config.js`
-7. `frontend/index.html`
-8. `frontend/.env.example`
+**Source Code Changes:**
 
-**Phase 2 - Core Types and Styles:**
-9. `frontend/src/types.ts`
-10. `frontend/src/index.css`
-
-**Phase 3 - API Layer:**
-11. `frontend/src/api/client.ts`
+- `frontend/src/api/client.ts` - Session-based API implementation
+- `frontend/src/components/InputForm.tsx` - Form field refactoring and validation fixes
+- `frontend/src/types.ts` - TypeScript interface updates
+- `frontend/src/App.tsx` - Color class review and updates
 
-**Phase 4 - Components (Leaf to Root):**
-12. `frontend/src/components/LoadingState.tsx`
-13. `frontend/src/components/ErrorDisplay.tsx`
-14. `frontend/src/components/RawOutput.tsx`
-15. `frontend/src/components/PlanView.tsx`
-16. `frontend/src/components/InputForm.tsx`
+**Configuration Updates:**
 
-**Phase 5 - Application Shell:**
-17. `frontend/src/App.tsx`
-18. `frontend/src/main.tsx`
-
-**Phase 6 - Test Infrastructure:**
-19. `frontend/src/__mocks__/handlers.ts`
-20. `frontend/src/__tests__/setup.ts`
+- `frontend/tailwind.config.cjs` - Primary color theme update
+- `frontend/src/index.css` - CSS custom property updates
+- `frontend/.env.example` - Verification of API URL configuration
 
-**Phase 7 - Unit Tests:**
-21. `frontend/src/__tests__/api/client.test.ts`
-22. `frontend/src/__tests__/components/LoadingState.test.tsx`
-23. `frontend/src/__tests__/components/ErrorDisplay.test.tsx`
-24. `frontend/src/__tests__/components/RawOutput.test.tsx`
-25. `frontend/src/__tests__/components/PlanView.test.tsx`
-26. `frontend/src/__tests__/components/InputForm.test.tsx`
+**Documentation Updates:**
 
-**Phase 8 - E2E Tests:**
-27. `frontend/e2e/smoke.spec.ts`
+- `README.md` - Comprehensive rewrite with all required sections
+- `frontend/docs/*.md` - Updates if field descriptions exist
 
-**Phase 9 - Documentation:**
-28. `frontend/README.md`
-29. `frontend/docs/README.md`
-30. `frontend/docs/getting-started.md`
-31. `frontend/docs/user-guide.md`
-32. `frontend/docs/troubleshooting.md`
-33-40. `frontend/docs/images/*.txt` (8 placeholder files)
-
-**Phase 10 - Root Repository Updates:**
-41. `README.md` (modify)
-42. `CHANGELOG.md` (modify)
+**Test Updates:**
 
----
+- `frontend/src/__mocks__/handlers.ts` - Session flow MSW handlers
+- `frontend/src/__tests__/api/client.test.ts` - API client tests
+- `frontend/src/__tests__/components/InputForm.test.tsx` - Form component tests
+- `frontend/e2e/smoke.spec.tsx` - E2E integration tests
 
-## 0.7 Special Instructions
-
-### 0.7.1 Feature-Specific Requirements
+**Build/Deployment:**
 
-**UI Design Specifications (User-Specified):**
+- No changes required to build configuration
+- No changes required to deployment configuration
 
-| Specification | Value | Implementation |
-|---------------|-------|----------------|
-| Primary color | `#E07A5F` (soft coral) | Apply to CTAs and brand elements |
-| Background | `#F4F1DE` (warm cream) | Full page background |
-| Text color | `#3D405B` (deep charcoal) | Body text and headings |
-| Success color | `#81B29A` (sage green) | Success states and confirmations |
-| Error color | `#E63946` (muted red) | Error messages and alerts |
-| Border radius | `rounded-xl` (12px) | Card and input elements |
-| Max width | 1200px | Container centered layout |
-| Whitespace | 16px minimum | Between sections and elements |
+### 0.6.2 Explicitly Out of Scope
 
-**Layout Specifications (User-Specified):**
+**Backend Modifications (User Mandate):**
 
-| Viewport | Form Width | Output Width | Arrangement |
-|----------|------------|--------------|-------------|
-| Desktop (≥768px) | 40% | 60% | Side-by-side columns |
-| Mobile (<768px) | 100% | 100% | Stacked vertically |
+- `backend/**/*` - All backend files frozen
+- `WeekendPlanner/**/*` - ADK agent code frozen
+- Backend API contracts - No changes to expected request/response formats
 
-**Header Requirements:**
+**Related Features Not Specified:**
 
-- Title: "Weekend Planner" using `text-3xl font-bold` with primary color
-- Subtitle: "Plan the perfect family weekend with AI" using `text-gray-500`
+- User authentication/authorization
+- Session persistence across browser sessions
+- Multi-user support beyond static user ID
+- Accessibility features beyond color contrast
+- Internationalization/localization
+- Analytics or telemetry
 
-### 0.7.2 Accessibility Requirements
+**Performance Optimizations Beyond Requirements:**
 
-**WCAG AA Compliance:**
+- Code splitting/lazy loading
+- API response caching
+- Image optimization
+- Service worker implementation
 
-| Requirement | Implementation |
-|-------------|----------------|
-| Label association | All inputs have `<label>` with `htmlFor` attribute |
-| Error announcements | Error messages use `aria-live="polite"` |
-| Focus visibility | Buttons have visible focus states with outline |
-| Color contrast | All text meets 4.5:1 ratio against background |
-| Loading state | Use `aria-busy="true"` on loading container |
+**Refactoring Unrelated to Core Objectives:**
 
-**Keyboard Navigation:**
+- Component architecture restructuring
+- State management library adoption
+- Test framework migration
+- Build tool changes
 
-- All interactive elements focusable via Tab key
-- Form submission via Enter key when focused on inputs
-- Escape key closes expandable sections
+**Additional Tooling Not Mentioned:**
 
-### 0.7.3 Form Field Specifications
+- ESLint/Prettier configuration changes
+- Git hooks or pre-commit configuration
+- CI/CD pipeline modifications
+- Docker configuration
 
-**Required Fields:**
-
-| Field | Type | Validation | Error Message |
-|-------|------|------------|---------------|
-| Location | text input | Non-empty string | "Location is required" |
-| Start Date | date picker | Valid date | "Start date is required" |
-| End Date | date picker | Valid date, ≥ Start Date | "End date must be on or after start date" |
-
-**Optional Fields:**
-
-| Field | Type | Format | Example |
-|-------|------|--------|---------|
-| Kids Ages | text input | Comma-separated integers | "3, 7, 12" |
-| Preferences | textarea | Free-form text | "outdoor activities, avoid crowds" |
-
-**Button Specifications:**
-
-| Button | Style | State Logic |
-|--------|-------|-------------|
-| "Generate Plan" | Primary CTA (coral background) | Disabled until Location + both dates filled |
-| "Reset" | Secondary/ghost (outline style) | Always enabled, clears form and output |
-
-### 0.7.4 Output Panel State Specifications
-
-| State | Visual Display | Content |
-|-------|---------------|---------|
-| Empty | Illustration placeholder + guidance text | "Enter your details and click Generate Plan" |
-| Loading | Skeleton cards with pulse animation | "Creating your perfect weekend..." |
-| Error | Red-bordered card | User message + expandable technical details |
-| Success | Plan cards with activity information | Plan text + collapsible "Raw Output" panel |
-
-### 0.7.5 Error Message Specifications
-
-**User-Facing Messages (Exact Text Required):**
-
-| Scenario | User Message |
-|----------|--------------|
-| Network unreachable | "Couldn't reach the backend. Make sure the ADK server is running with `adk web`" |
-| 4xx client error | "Invalid request: [brief description]" |
-| 5xx server error | "Something went wrong on the server. Please try again." |
-| Malformed response | "Received an unexpected response format" |
-| CORS blocked | "Connection blocked. See README for proxy setup." |
-
-### 0.7.6 Testing Requirements
-
-**Coverage Targets:**
-
-| Metric | Minimum | Target |
-|--------|---------|--------|
-| Line coverage | 80% | 90%+ |
-| Branch coverage | 75% | 85%+ |
-| Function coverage | 80% | 90%+ |
-
-**Test Isolation Requirements:**
-
-- All tests must run without backend (MSW mocks required)
-- No test should depend on another test's state
-- Each test file must be independently runnable
-
-**MSW Handler Requirements:**
-
-| Endpoint | Success Handler | Error Handlers |
-|----------|-----------------|----------------|
-| POST /run | Mock plan response | 400, 500, timeout |
-| POST /apps/.../sessions/... | Session created | Creation failure |
-
-### 0.7.7 Documentation Requirements
-
-**End-User Documentation (Non-Technical):**
-
-| Requirement | Implementation |
-|-------------|----------------|
-| No code snippets | Documentation uses only prose and screenshots |
-| No technical jargon | Use plain language for all explanations |
-| Screenshot placeholders | 8 placeholder files with capture instructions |
-| Mermaid user flow diagram | Visual journey in user-guide.md |
-
-**Developer Documentation (frontend/README.md):**
-
-| Section | Content |
-|---------|---------|
-| Prerequisites | Node.js 20.x, npm |
-| Installation | npm install |
-| Development | npm run dev |
-| Building | npm run build |
-| Testing | npm run test, npm run test:coverage |
-| Environment | VITE_API_BASE_URL configuration |
-
-### 0.7.8 Build and Validation Commands
-
-**Required npm Scripts:**
-
-```json
-{
-  "dev": "vite",
-  "build": "tsc && vite build",
-  "preview": "vite preview",
-  "test": "vitest run",
-  "test:watch": "vitest",
-  "test:coverage": "vitest run --coverage",
-  "test:ui": "vitest --ui",
-  "lint": "tsc --noEmit"
+**Future Enhancements:**
+
+- Additional form fields
+- Plan customization options
+- Save/share functionality
+- Mobile responsiveness improvements
+
+### 0.6.3 Boundary Clarifications
+
+**API Endpoint Changes:**
+
+| Item | In Scope | Out of Scope |
+|------|----------|--------------|
+| Frontend API calls | ✓ Change to session endpoints | ✗ Backend endpoint implementation |
+| Request payload format | ✓ Match ADK `new_message` format | ✗ Change ADK expected format |
+| Response handling | ✓ Parse ADK response | ✗ Change ADK response format |
+
+**Form Field Changes:**
+
+| Item | In Scope | Out of Scope |
+|------|----------|--------------|
+| Remove Start/End Date | ✓ Delete UI elements | ✗ Add new date-related fields |
+| Remove Preferences | ✓ Delete UI elements | ✗ Add new preference options |
+| Rename Location | ✓ Change label to "Zip Code" | ✗ Add address autocomplete |
+| Fix Kids Ages | ✓ Validation logic | ✗ Age-based recommendations |
+
+**Color Changes:**
+
+| Item | In Scope | Out of Scope |
+|------|----------|--------------|
+| Primary color | ✓ Salmon → Dark blue | ✗ Full theme redesign |
+| Contrast compliance | ✓ WCAG AA (4.5:1) | ✗ WCAG AAA (7:1) |
+| CSS variables | ✓ Update existing | ✗ Add animation variables |
+
+**Testing Changes:**
+
+| Item | In Scope | Out of Scope |
+|------|----------|--------------|
+| Unit tests | ✓ Update for new behavior | ✗ Increase coverage target |
+| E2E tests | ✓ Update for new form | ✗ Add new E2E scenarios |
+| MSW handlers | ✓ Session flow support | ✗ Comprehensive API mocking |
+
+## 0.7 Execution Parameters
+
+### 0.7.1 Special Execution Instructions
+
+**Process-Specific Requirements:**
+
+- Frontend is non-functional; complete refactoring permitted to achieve working state
+- All bug fixes must be accompanied by corresponding test coverage
+- Documentation must enable zero-assistance setup
+- Any additional frontend issues discovered should be fixed and documented
+
+**Tools and Platforms:**
+
+| Tool | Usage |
+|------|-------|
+| Node.js >= 18.x | Runtime environment |
+| npm >= 9.x | Package management |
+| Vitest | Test execution |
+| MSW 2.x | API mocking |
+| Tailwind CSS | Styling framework |
+| Vite | Build tool |
+
+**Quality Requirements:**
+
+- All existing tests must pass after modifications
+- New tests must be added for all bug fixes
+- WCAG AA color contrast (4.5:1 minimum) required
+- TypeScript strict mode compliance
+
+**Code Review Requirements:**
+
+- Changes should follow existing code patterns
+- No breaking changes to component API signatures where possible
+- Test coverage for all new and modified functionality
+
+**Deployment Considerations:**
+
+- Frontend changes only; no backend deployment needed
+- Environment variable configuration must be documented
+- Build process must complete without errors
+
+### 0.7.2 Constraints and Boundaries
+
+**Technical Constraints:**
+
+- Must use `crypto.randomUUID()` for session ID generation
+- Must use static user ID or generate per-session
+- Must use two-step session flow (create then message)
+- Must use exact ADK endpoint format: `/apps/WeekendPlanner/users/{userId}/sessions/{sessionId}`
+
+**Process Constraints:**
+
+- DO NOT modify backend code
+- DO NOT modify ADK agent code
+- DO NOT change backend API contracts
+- DO preserve existing working functionality
+
+**Output Constraints:**
+
+- Form must render exactly two input fields
+- Zip Code must be required
+- Kids Ages must be optional
+- Color scheme must use dark blue (#1e3a5f) and white (#ffffff)
+
+**Compatibility Requirements:**
+
+- React 18.2.0 compatibility
+- Vite build compatibility
+- Vitest test framework compatibility
+- MSW 2.x handler format compatibility
+
+### 0.7.3 Validation Checklist
+
+Pre-completion verification requirements:
+
+| Check | Validation Method |
+|-------|-------------------|
+| API endpoint correct | Test calls `/apps/WeekendPlanner/users/{userId}/sessions/{sessionId}` |
+| Session ID generation | Verify `crypto.randomUUID()` usage |
+| Two-step flow | Session created before plan request |
+| Age parsing | `"5, 12, 8"` parses to `[5, 12, 8]` |
+| Start Date removed | Field not rendered |
+| End Date removed | Field not rendered |
+| Preferences removed | Field not rendered |
+| Form has two fields | Only Zip Code and Kids Ages present |
+| Optional Kids Ages | Form submits with only Zip Code |
+| Color scheme | Dark blue (#1e3a5f) applied |
+| Documentation | README complete and accurate |
+| Tests pass | `npm test` succeeds |
+| MSW handlers | Support two-step session flow |
+
+## 0.8 Special Instructions
+
+### 0.8.1 Task-Specific Requirements
+
+**Backend Freeze Mandate (User-Specified):**
+
+> "Backend is frozen. Do not modify anything in `backend/` directory."
+
+This constraint is absolute and non-negotiable. All changes must be limited to the `frontend/` directory and root documentation files.
+
+**Frontend Refactoring Permission (User-Specified):**
+
+> "Frontend is broken—fix it completely. Refactoring frontend code is permitted where necessary to achieve a working application."
+
+This grants permission to make substantial changes to frontend code beyond simple bug fixes. Any changes must be documented.
+
+**Additional Issue Discovery (User-Specified):**
+
+> "If you discover additional frontend issues blocking functionality, fix them and document what was changed."
+
+Any issues found during implementation should be fixed and recorded in the documentation.
+
+### 0.8.2 Implementation Patterns to Follow
+
+**Existing Pattern: API Client Structure**
+
+Follow the existing pattern in `client.ts`:
+```typescript
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+export async function generatePlan(input: GeneratePlanInput): Promise<PlanResponse> {
+  // Implementation
 }
 ```
 
-**Validation Sequence:**
+**Existing Pattern: Component Structure**
 
-```bash
-cd frontend
-npm install              # Must complete without errors
-npm run build            # Must produce zero TypeScript/build errors
-npm run test             # Must show 100% pass rate
-npm run test:coverage    # Must report 80%+ coverage
-npm run dev              # Must start at localhost:5173
+Follow the existing functional component pattern:
+```typescript
+export function InputForm({ onSubmit, isLoading }: InputFormProps) {
+  const [formData, setFormData] = useState<FormState>(initialState);
+  // Hooks and handlers
+  return (/* JSX */);
+}
 ```
 
-### 0.7.9 Integration Testing Notes
+**Existing Pattern: Test Structure**
 
-**Full-Stack Testing:**
-
-Terminal 1 (Backend):
-```bash
-# From repository root
-adk web
-# Runs at http://localhost:8000
+Follow the existing test organization:
+```typescript
+describe('ComponentName', () => {
+  it('describes expected behavior', async () => {
+    render(<Component />);
+    expect(screen.getByRole(...)).toBeInTheDocument();
+  });
+});
 ```
 
-Terminal 2 (Frontend):
-```bash
-cd frontend
-npm run dev
-# Runs at http://localhost:5173
+### 0.8.3 Code Style and Conventions
+
+**Match Existing Code Style:**
+
+- Use functional components with TypeScript
+- Use named exports for components
+- Use async/await for asynchronous operations
+- Use template literals for string interpolation
+- Use destructuring for props and state
+
+**Preserve Existing Conventions:**
+
+- Test files colocated in `__tests__/` directory
+- Mock handlers in `__mocks__/` directory
+- Type definitions in `types.ts`
+- CSS custom properties for theme values
+
+### 0.8.4 Documentation Standards
+
+**README Structure (Required Sections):**
+
+1. Prerequisites
+2. Environment Setup
+3. Installation
+4. Running the Application
+5. API Endpoints
+6. Testing
+7. Troubleshooting
+
+**Unverified Section Marking:**
+
+Any documentation that cannot be validated must be marked:
+```
+⚠️ UNVERIFIED: [section name]
+Reason: [why it couldn't be verified]
+Manual verification: [steps user can take]
 ```
 
-**CORS Handling Options:**
+### 0.8.5 MSW Handler Format
 
-Option A - Vite Proxy (Recommended):
-- Configure `vite.config.ts` with proxy to rewrite `/api/*` to backend
+**Required Handler Structure:**
 
-Option B - Direct Connection:
-- Set `VITE_API_BASE_URL=http://localhost:8000`
-- Requires backend CORS configuration
+```typescript
+import { http, HttpResponse } from 'msw';
 
----
-
-## 0.8 Validation and Success Criteria
-
-### 0.8.1 Application Validation Criteria
-
-**Build and Runtime Validation:**
-
-| Criterion | Command | Expected Result |
-|-----------|---------|-----------------|
-| Dependencies install | `npm install` | Exit code 0, no npm ERR messages |
-| Development server starts | `npm run dev` | Server running at localhost:5173 |
-| Production build succeeds | `npm run build` | Zero TypeScript errors, dist/ created |
-| Type checking passes | `npm run lint` | Zero type errors reported |
-
-**UI Functionality Validation:**
-
-| Feature | Test Method | Success Criteria |
-|---------|-------------|------------------|
-| Form renders | Visual inspection | All 5 fields visible with labels |
-| Required validation | Leave location empty | Generate button disabled |
-| Date validation | Set end < start | Inline error message displayed |
-| API integration | Submit valid form | Loading state appears, then result |
-| Error handling | Disconnect backend | Error message with retry option |
-| Reset functionality | Click Reset | All fields cleared, output hidden |
-| Responsive layout | Resize browser | Desktop: 2-column, Mobile: stacked |
-
-### 0.8.2 Testing Validation Criteria
-
-**Test Execution:**
-
-| Criterion | Command | Expected Result |
-|-----------|---------|-----------------|
-| All tests pass | `npm run test` | 32 tests passing, 0 failures |
-| Coverage threshold | `npm run test:coverage` | ≥80% line coverage |
-| No flaky tests | Run 3 times | Consistent pass/fail results |
-| Backend independence | Disconnect backend | All tests still pass (MSW mocks) |
-
-**Test Case Inventory:**
-
-| Test File | Test Count | Coverage Target |
-|-----------|------------|-----------------|
-| client.test.ts | 7 | API client functions |
-| InputForm.test.tsx | 9 | Form validation and submission |
-| PlanView.test.tsx | 5 | Plan rendering states |
-| ErrorDisplay.test.tsx | 4 | Error presentation |
-| LoadingState.test.tsx | 3 | Loading animation |
-| RawOutput.test.tsx | 4 | Collapsible behavior |
-| **Total** | **32** | **80%+ coverage** |
-
-### 0.8.3 Documentation Validation Criteria
-
-**File Existence:**
-
-| File | Location | Required |
-|------|----------|----------|
-| README.md | `frontend/` | Yes |
-| README.md | `frontend/docs/` | Yes |
-| getting-started.md | `frontend/docs/` | Yes |
-| user-guide.md | `frontend/docs/` | Yes |
-| troubleshooting.md | `frontend/docs/` | Yes |
-| Image placeholders | `frontend/docs/images/` | 8 files |
-
-**Content Validation:**
-
-| Criterion | Validation Method | Success Criteria |
-|-----------|-------------------|------------------|
-| Non-technical language | Manual review | No code snippets in user docs |
-| Internal links work | Click all links | No broken references |
-| Mermaid diagram renders | View in GitHub | Flowchart displays correctly |
-| Screenshot placeholders complete | File count | 8 .txt files with instructions |
-
-### 0.8.4 Integration Validation Criteria
-
-**Backend Compatibility:**
-
-| Test | Method | Success Criteria |
-|------|--------|------------------|
-| Session creation | POST to /apps/.../sessions/... | 200 OK response |
-| Plan generation | POST to /run with valid input | ADKResponse array returned |
-| Error handling | POST with invalid data | 4xx with error details |
-| Timeout handling | Slow/no response | 30s timeout triggers error UI |
-
-**Preservation Validation:**
-
-| Check | Method | Success Criteria |
-|-------|--------|------------------|
-| Backend unchanged | `git diff WeekendPlanner/` | No modifications |
-| Root .env unchanged | `git diff .env.example` | No modifications |
-| requirements.txt unchanged | `git diff requirements.txt` | No modifications |
-
-### 0.8.5 Success Criteria Summary
-
-**Mandatory Success Criteria:**
-
-- [ ] `npm install` completes without errors
-- [ ] `npm run dev` starts development server at port 5173
-- [ ] `npm run build` produces production build with zero errors
-- [ ] `npm run test` executes with 100% pass rate (32/32 tests)
-- [ ] `npm run test:coverage` reports 80%+ line coverage
-- [ ] UI connects to ADK backend and generates plans
-- [ ] All form validation works correctly (location, dates, date order)
-- [ ] Error states display appropriate user-friendly messages
-- [ ] Responsive layout works on mobile (single column) and desktop (two column)
-- [ ] All specified test cases implemented and passing
-- [ ] Tests run without requiring backend (MSW mocks functional)
-- [ ] Zero flaky tests
-- [ ] `/docs` folder contains all 4 markdown files
-- [ ] `/docs/images` contains 8 placeholder files
-- [ ] User flow Mermaid diagram renders in GitHub
-- [ ] Documentation uses non-technical language throughout
-- [ ] No code snippets in user documentation
-- [ ] All internal documentation links work correctly
-- [ ] Zero modifications to `WeekendPlanner/` directory
-- [ ] Environment variables documented in `.env.example`
-- [ ] Main `README.md` includes frontend setup instructions
-
-### 0.8.6 Acceptance Testing Workflow
-
-**Phase 1 - Build Verification:**
-
-```bash
-cd frontend
-npm install
-npm run build
-# Expected: "vite v5.x.x building for production..."
-# Expected: "✓ built in X.XXs"
+export const handlers = [
+  http.post(`${API_BASE}/apps/WeekendPlanner/users/:userId/sessions/:sessionId`, 
+    async ({ request }) => {
+      const body = await request.json().catch(() => null);
+      
+      // Empty body = session creation
+      if (!body || Object.keys(body).length === 0) {
+        return HttpResponse.json({ status: 'created' }, { status: 200 });
+      }
+      
+      // Body with new_message = plan generation
+      if (body.new_message) {
+        return HttpResponse.json({
+          candidates: [{
+            content: { parts: [{ text: 'Mock weekend plan response' }] }
+          }]
+        }, { status: 200 });
+      }
+      
+      return HttpResponse.json({ error: 'Invalid request' }, { status: 400 });
+    }
+  ),
+];
 ```
 
-**Phase 2 - Test Verification:**
+### 0.8.6 Form Specification Compliance
 
-```bash
-npm run test
-# Expected: "32 passed"
+**Exact Form Requirements:**
 
-npm run test:coverage
-# Expected: "All files | 80+ | 75+ | 80+ | ..."
-```
+| Field | Label | Type | Required | Validation |
+|-------|-------|------|----------|------------|
+| Zip Code | "Zip Code" | text | Yes | Non-empty string |
+| Kids Ages | "Kids Ages" | text | No | Comma-separated integers, 0 < age < 120 |
 
-**Phase 3 - Development Server:**
+**Remove All Other Fields:**
 
-```bash
-npm run dev
-# Expected: "VITE v5.x.x ready in XXX ms"
-# Expected: "➜ Local: http://localhost:5173/"
-```
-
-**Phase 4 - Full-Stack Integration:**
-
-```bash
-# Terminal 1 (from repo root)
-adk web
-
-#### Terminal 2
-cd frontend && npm run dev
-
-#### Browser: http://localhost:5173
-#### Action: Fill form with "San Francisco", valid dates
-#### Action: Click "Generate Plan"
-#### Expected: Loading state → Plan displayed
-```
-
-**Phase 5 - Documentation Review:**
-
-```bash
-# View in GitHub or Markdown preview
-frontend/docs/README.md
-frontend/docs/getting-started.md
-frontend/docs/user-guide.md
-frontend/docs/troubleshooting.md
-
-#### Verify: No code blocks, plain language, all links work
-```
-
----
+No Start Date, End Date, Preferences, or Location (renamed to Zip Code) fields beyond the two specified above.
 

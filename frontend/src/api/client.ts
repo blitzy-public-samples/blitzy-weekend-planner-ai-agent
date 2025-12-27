@@ -1,6 +1,10 @@
 /**
  * ADK API client for the Weekend Planner frontend.
  * Implements communication with the ADK backend using native fetch API.
+ * 
+ * Uses two-step session-based flow per Google ADK conventions:
+ * 1. Create session with empty body POST to /apps/{app}/users/{user}/sessions/{session}
+ * 2. Send message with new_message payload to the same endpoint
  */
 
 import type { GeneratePlanInput, ADKResponse, GeneratePlanResult, ADKEvent, PlanError } from '../types';
@@ -14,20 +18,13 @@ const REQUEST_TIMEOUT_MS = 30000;
 /** Default app name for ADK */
 const APP_NAME = 'WeekendPlanner';
 
-/** Default user ID for ADK sessions */
-const DEFAULT_USER_ID = 'ui_user';
-
-/**
- * Generates a unique session ID
- */
-function generateSessionId(): string {
-  return `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-}
+/** Default user ID for ADK sessions - static per requirements */
+const DEFAULT_USER_ID = 'user-1';
 
 /**
  * Creates a new ADK session.
- * @param userId - The user ID for the session (defaults to ui_user)
- * @param sessionId - The session ID (generated if not provided)
+ * @param userId - The user ID for the session (defaults to 'user-1')
+ * @param sessionId - The session ID (generated via crypto.randomUUID() if not provided)
  * @returns Promise resolving to the session ID on success
  * @throws Error if session creation fails
  */
@@ -35,7 +32,7 @@ export async function createSession(
   userId: string = DEFAULT_USER_ID,
   sessionId?: string
 ): Promise<string> {
-  const sid = sessionId || generateSessionId();
+  const sid = sessionId || crypto.randomUUID();
   const url = `${API_BASE_URL}/apps/${APP_NAME}/users/${userId}/sessions/${sid}`;
 
   const controller = new AbortController();
@@ -71,18 +68,17 @@ export async function createSession(
 
 /**
  * Builds the prompt string from input data.
+ * Constructs a simple prompt with zip code and optional kids ages.
+ * 
  * @param input - The user's input data
  * @returns The formatted prompt string
  */
 function buildPrompt(input: GeneratePlanInput): string {
-  let prompt = `Plan a weekend trip to ${input.location} from ${input.startDate} to ${input.endDate}.`;
+  let prompt = `Plan a weekend trip for zip code ${input.location}.`;
 
-  if (input.kidsAges && input.kidsAges.trim()) {
-    prompt += ` We have kids ages ${input.kidsAges}.`;
-  }
-
-  if (input.preferences && input.preferences.trim()) {
-    prompt += ` Preferences: ${input.preferences}`;
+  // kidsAges is now number[] - check length for presence of ages
+  if (input.kidsAges && input.kidsAges.length > 0) {
+    prompt += ` We have kids ages ${input.kidsAges.join(', ')}.`;
   }
 
   return prompt;
@@ -93,7 +89,7 @@ function buildPrompt(input: GeneratePlanInput): string {
  * Prioritizes the final_summary from the SummarizerAgent, falling back to
  * the last model response if no specific summary is found.
  * 
- * @param response - Array of ADK events from the ADK /run endpoint
+ * @param response - Array of ADK events from the ADK endpoint
  * @returns Extracted plan text or undefined if not found
  */
 function extractPlanText(response: ADKResponse): string | undefined {
@@ -167,50 +163,70 @@ function extractPlanText(response: ADKResponse): string | undefined {
 
 /**
  * Generates a weekend plan using the ADK backend.
+ * Implements two-step session-based flow per Google ADK conventions:
+ * 1. Create session with empty body POST
+ * 2. Send message with new_message payload
+ * 
  * @param input - The user's input data for plan generation
- * @param userId - The user ID (defaults to ui_user)
- * @param sessionId - The session ID (generated if not provided)
  * @returns Promise resolving to the plan result
  */
 export async function generatePlan(
-  input: GeneratePlanInput,
-  userId: string = DEFAULT_USER_ID,
-  sessionId?: string
+  input: GeneratePlanInput
 ): Promise<GeneratePlanResult> {
-  const sid = sessionId || generateSessionId();
-  const url = `${API_BASE_URL}/run`;
+  // Generate unique session ID client-side using crypto.randomUUID()
+  const sessionId = crypto.randomUUID();
+  const userId = DEFAULT_USER_ID;
+  const url = `${API_BASE_URL}/apps/${APP_NAME}/users/${userId}/sessions/${sessionId}`;
 
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
 
   try {
-    const requestBody = {
-      app_name: APP_NAME,
-      user_id: userId,
-      session_id: sid,
-      new_message: {
-        role: 'user',
-        parts: [{ text: buildPrompt(input) }]
-      },
-      streaming: false
-    };
-
-    const response = await fetch(url, {
+    // Step 1: Create session with empty body
+    const createResponse = await fetch(url, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify(requestBody),
+      body: JSON.stringify({}),
+      signal: controller.signal
+    });
+
+    if (!createResponse.ok) {
+      clearTimeout(timeoutId);
+      const errorBody = await createResponse.text().catch(() => '');
+      return {
+        success: false,
+        error: {
+          message: `Session creation failed with status ${createResponse.status}`,
+          statusCode: createResponse.status,
+          body: errorBody
+        }
+      };
+    }
+
+    // Step 2: Send message with new_message payload to the same endpoint
+    const messageResponse = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        new_message: {
+          role: 'user',
+          parts: [{ text: buildPrompt(input) }]
+        }
+      }),
       signal: controller.signal
     });
 
     clearTimeout(timeoutId);
 
-    if (!response.ok) {
-      const errorBody = await response.text().catch(() => '');
+    if (!messageResponse.ok) {
+      const errorBody = await messageResponse.text().catch(() => '');
       const error: PlanError = {
-        message: getErrorMessage(response.status, errorBody),
-        statusCode: response.status,
+        message: getErrorMessage(messageResponse.status, errorBody),
+        statusCode: messageResponse.status,
         body: errorBody
       };
 
@@ -222,13 +238,13 @@ export async function generatePlan(
 
     let data: ADKResponse;
     try {
-      data = await response.json();
+      data = await messageResponse.json();
     } catch {
       return {
         success: false,
         error: {
           message: 'Received an unexpected response format',
-          statusCode: response.status
+          statusCode: messageResponse.status
         }
       };
     }

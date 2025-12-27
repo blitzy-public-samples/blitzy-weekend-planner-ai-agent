@@ -7,8 +7,8 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        // Primary CTA color - soft coral for buttons and brand elements
-        primary: '#E07A5F',
+        // Primary CTA color - dark blue for buttons and brand elements (WCAG AA compliant)
+        primary: '#1e3a5f',
         // Background color - warm cream for full page background
         background: '#F4F1DE',
         // Text color - deep charcoal for body text and headings

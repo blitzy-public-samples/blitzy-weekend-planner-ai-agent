@@ -4,10 +4,10 @@
  * This file contains Tailwind CSS directives and custom global styles
  * for the Weekend Planner AI Agent frontend application.
  * 
- * Color Palette:
+ * Color Palette (WCAG AA Compliant):
  * - Background: #F4F1DE (warm cream)
  * - Text: #3D405B (deep charcoal)
- * - Primary: #E07A5F (soft coral)
+ * - Primary: #1e3a5f (dark blue - 10.5:1 contrast ratio)
  * - Success: #81B29A (sage green)
  * - Error: #E63946 (muted red)
  */
@@ -62,19 +62,19 @@
 
   /* Link styles */
   a {
-    color: #E07A5F; /* Primary coral color */
+    color: #1e3a5f; /* Primary dark blue - WCAG AA compliant */
     text-decoration: none;
     transition: color 0.2s ease;
   }
 
   a:hover {
-    color: #c66a52; /* Darker coral on hover */
+    color: #163045; /* Darker blue on hover */
     text-decoration: underline;
   }
 
   /* Focus states for accessibility - WCAG AA compliant */
   *:focus-visible {
-    outline: 2px solid #E07A5F;
+    outline: 2px solid #1e3a5f;
     outline-offset: 2px;
   }
 
@@ -136,9 +136,9 @@
  * Reusable component classes that can be applied throughout the application.
  */
 @layer components {
-  /* Primary button style */
+  /* Primary button style - WCAG AA compliant dark blue */
   .btn-primary {
-    background-color: #E07A5F;
+    background-color: #1e3a5f;
     color: white;
     padding: 0.75rem 1.5rem;
     border-radius: 0.75rem;
@@ -147,7 +147,7 @@
   }
 
   .btn-primary:hover:not(:disabled) {
-    background-color: #c66a52;
+    background-color: #163045;
   }
 
   .btn-primary:active:not(:disabled) {
@@ -155,7 +155,7 @@
   }
 
   .btn-primary:disabled {
-    background-color: #E07A5F;
+    background-color: #1e3a5f;
     opacity: 0.5;
   }
 
@@ -172,8 +172,8 @@
 
   .btn-secondary:hover:not(:disabled) {
     background-color: rgba(61, 64, 91, 0.1);
-    border-color: #E07A5F;
-    color: #E07A5F;
+    border-color: #1e3a5f;
+    color: #1e3a5f;
   }
 
   /* Card container style */
@@ -196,8 +196,8 @@
   }
 
   .input-field:focus {
-    border-color: #E07A5F;
-    box-shadow: 0 0 0 3px rgba(224, 122, 95, 0.2);
+    border-color: #1e3a5f;
+    box-shadow: 0 0 0 3px rgba(30, 58, 95, 0.2);
     outline: none;
   }
 
