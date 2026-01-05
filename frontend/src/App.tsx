@@ -7,7 +7,7 @@
  * 
  * Architecture:
  * - Uses React useState hooks for state management (isLoading, error, result)
- * - Integrates with ADK backend via createSession and generatePlan API functions
+ * - Integrates with ADK backend via generatePlan API function (session handled internally)
  * - Renders conditional UI based on current application state (idle, loading, error, success)
  * - Implements responsive two-column layout (40%/60% on desktop, stacked on mobile)
  * 
@@ -22,7 +22,7 @@
  */
 
 import { useState, useCallback } from 'react';
-import { createSession, generatePlan } from './api/client';
+import { generatePlan } from './api/client';
 import type { GeneratePlanInput, GeneratePlanResult, PlanError } from './types';
 import InputForm from './components/InputForm';
 import PlanView from './components/PlanView';
@@ -76,9 +76,8 @@ function App(): JSX.Element {
    * 
    * Workflow:
    * 1. Set loading state and clear previous error/result
-   * 2. Create ADK session for the conversation
-   * 3. Call generatePlan with user input
-   * 4. Update state based on success or failure
+   * 2. Call generatePlan (handles session creation internally)
+   * 3. Update state based on success or failure
    * 
    * @param input - The validated form input from InputForm
    */
@@ -90,15 +89,11 @@ function App(): JSX.Element {
     setLastInput(input);
 
     try {
-      // Step 1: Create ADK session
-      // This establishes the conversation context with the backend
-      await createSession();
-
-      // Step 2: Generate the weekend plan
+      // Generate the weekend plan
       // The API client handles prompt building internally
       const planResult = await generatePlan(input);
 
-      // Step 3: Handle the result
+      // Handle the result
       if (planResult.success) {
         // Success - display the plan
         setResult(planResult);
