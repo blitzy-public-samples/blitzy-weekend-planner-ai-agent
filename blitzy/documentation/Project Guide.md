@@ -2,222 +2,250 @@
 
 ## Executive Summary
 
-This project addresses a critical bug fix for a duplicate session creation error in the Weekend Planner frontend application. The bug caused 100% failure rate for plan generation with the error message "Session already exists: <UUID>".
+**Project Status: 64% Complete (9 hours completed out of 14 total hours)**
 
-**Completion Status**: 8 hours completed out of 10 total hours = **80% complete**
+This bug fix project addressed the "Invalid request: Invalid request: Session already exists: &lt;UUID&gt;" error that occurred on every form submission in the Weekend Planner frontend application.
 
 ### Key Achievements
-- ✅ Root cause identified and fixed in `frontend/src/App.tsx`
-- ✅ All 113 tests passing (100% pass rate)
-- ✅ TypeScript compilation successful with no errors
+- ✅ Root cause identified and documented
+- ✅ Primary bug fix implemented in App.tsx (removed redundant createSession() call)
+- ✅ Additional endpoint fix implemented in client.ts (changed from session endpoint to /run_sse)
+- ✅ Test infrastructure updated to support new API flow
+- ✅ All 113 tests passing
+- ✅ TypeScript compilation clean
 - ✅ Production build successful
-- ✅ Test coverage meets thresholds (93.68% statements, 83.66% branches)
-- ✅ Change committed and ready for review
+- ✅ E2E browser testing verified fix works
 
-### Remaining Work (2 hours estimated)
-- Human review and code approval (0.5 hours)
-- Production deployment verification (0.5 hours)
-- End-to-end testing against live ADK backend (1 hour)
-
----
-
-## Bug Fix Details
-
-### Root Cause
-The `handleSubmit` function in `App.tsx` explicitly called `createSession()` before calling `generatePlan()`. However, `generatePlan()` in `client.ts` already handles session creation internally (generates UUID, POSTs to create session, then sends message). This resulted in duplicate session creation attempts, triggering Google ADK's session conflict detection.
-
-### Fix Applied
-**File**: `frontend/src/App.tsx`
-
-| Line(s) | Change Description |
-|---------|-------------------|
-| 10 | Updated architecture comment to indicate session handled internally |
-| 25 | Removed `createSession` from import statement |
-| 77-81 | Updated JSDoc workflow from 4 steps to 3 steps |
-| 93-96 | Deleted redundant `await createSession()` call and comments |
-| 97 | Changed "Step 2:" to just "Generate the weekend plan" |
-| 101 | Changed "Step 3:" to just "Handle the result" |
-
-### Git Commit
-```
-Commit: b9dc1c5
-Author: Blitzy Agent
-Message: fix(frontend): remove redundant createSession call causing duplicate session error
-Files Changed: frontend/src/App.tsx (+6, -11 lines)
-```
+### Completion Calculation
+- **Hours Completed**: 9 hours
+  - Bug diagnosis and root cause identification: 2h
+  - App.tsx bug fix implementation: 0.5h
+  - client.ts endpoint fix: 2h
+  - handlers.ts mock updates: 1.5h
+  - client.test.ts test updates: 1h
+  - smoke.spec.tsx syntax fix: 0.25h
+  - Testing and verification: 1h
+  - E2E browser testing: 0.75h
+- **Hours Remaining**: 5 hours (with 1.25x enterprise buffer)
+- **Total Project Hours**: 14 hours
+- **Completion**: 9/14 = 64%
 
 ---
 
-## Validation Results
-
-### TypeScript Compilation
-```
-✅ npm run lint (tsc --noEmit) - PASSED with no errors
-```
-
-### Test Suite Results
-```
-Test Files: 7 passed (7)
-Tests: 113 passed (113)
-Duration: 5.01s
-```
-
-| Test File | Tests | Status |
-|-----------|-------|--------|
-| src/__tests__/api/client.test.ts | 25+ | ✅ Pass |
-| src/__tests__/components/ErrorDisplay.test.tsx | ~15 | ✅ Pass |
-| src/__tests__/components/InputForm.test.tsx | ~20 | ✅ Pass |
-| src/__tests__/components/LoadingState.test.tsx | ~8 | ✅ Pass |
-| src/__tests__/components/PlanView.test.tsx | ~12 | ✅ Pass |
-| src/__tests__/components/RawOutput.test.tsx | ~8 | ✅ Pass |
-| e2e/smoke.spec.tsx | 32 | ✅ Pass |
-
-### Test Coverage
-| Metric | Coverage | Threshold | Status |
-|--------|----------|-----------|--------|
-| Statements | 93.68% | 80% | ✅ Pass |
-| Branches | 83.66% | 75% | ✅ Pass |
-| Functions | 100% | 80% | ✅ Pass |
-| Lines | 93.68% | 80% | ✅ Pass |
-
-### Production Build
-```
-✅ vite build - PASSED
-  - 37 modules transformed
-  - dist/index.html: 0.48 kB
-  - dist/assets/index-*.css: 18.59 kB
-  - dist/assets/index-*.js: 21.56 kB
-  - dist/assets/vendor-*.js: 140.89 kB (React bundle)
-```
-
-### Bug Elimination Verification
-```bash
-# Verify createSession removed from App.tsx
-grep -n "createSession" frontend/src/App.tsx
-# Result: No matches (exit code 1) ✅
-
-# Verify error no longer in test output
-npm run test 2>&1 | grep -i "session already exists"
-# Result: No matches ✅
-```
-
----
-
-## Hours Breakdown
+## Project Hours Breakdown
 
 ```mermaid
 pie title Project Hours Breakdown
-    "Completed Work" : 8
-    "Remaining Work" : 2
+    "Completed Work" : 9
+    "Remaining Work" : 5
 ```
-
-### Completed Work (8 hours)
-| Task | Hours |
-|------|-------|
-| Root cause investigation and code analysis | 2.0 |
-| Web research on Google ADK session behavior | 0.5 |
-| Bug fix implementation | 1.0 |
-| Comment and documentation updates | 0.5 |
-| TypeScript compilation verification | 0.5 |
-| Test suite execution and verification | 1.0 |
-| Production build verification | 0.5 |
-| Git commit and code review preparation | 0.5 |
-| Validation and documentation | 1.5 |
-| **Total Completed** | **8.0** |
-
-### Remaining Work (2 hours)
-| Task | Hours | Priority | Notes |
-|------|-------|----------|-------|
-| Human code review and approval | 0.5 | High | Manual review of changes |
-| Production deployment | 0.5 | High | Deploy to production environment |
-| End-to-end testing with live ADK backend | 1.0 | High | Verify fix against actual Google ADK |
-| **Total Remaining** | **2.0** | | |
-
-**Completion Calculation**: 8 hours completed / (8 + 2) total hours = **80% complete**
 
 ---
 
-## Development Guide
+## Validation Results Summary
 
-### Prerequisites
-- Node.js v20.x or later
-- npm v10.x or later
-- Git
+### Bug Fix Status: ✅ VERIFIED AND FIXED
+
+**Original Bug**: "Invalid request: Invalid request: Session already exists: &lt;UUID&gt;"
+
+**Root Cause**: 
+1. The `handleSubmit` function in `App.tsx` explicitly called `createSession()` before calling `generatePlan()`
+2. However, `generatePlan()` in `client.ts` already handles session creation internally
+3. Additionally, messages were being sent to the session endpoint instead of the ADK `/run_sse` streaming endpoint
+
+### Files Modified
+
+| File | Change Type | Description |
+|------|-------------|-------------|
+| `frontend/src/App.tsx` | Bug Fix | Removed redundant `createSession()` import and call, updated documentation |
+| `frontend/src/api/client.ts` | Endpoint Fix | Changed message endpoint to `/run_sse`, added SSE response parsing |
+| `frontend/src/__mocks__/handlers.ts` | Test Infrastructure | Updated mocks for two-endpoint API flow |
+| `frontend/src/__tests__/api/client.test.ts` | Test Updates | Updated tests for new API flow |
+| `frontend/e2e/smoke.spec.tsx` | Syntax Fix | Fixed handler array spreading |
+
+### Test Results
+
+| Category | Count | Status |
+|----------|-------|--------|
+| API Client Tests | 25+ | ✅ Pass |
+| Component Tests | 50+ | ✅ Pass |
+| E2E Smoke Tests | 32 | ✅ Pass |
+| TypeScript Compilation | - | ✅ Pass |
+| Production Build | - | ✅ Pass |
+| **Total** | **113** | **✅ All Pass** |
+
+### E2E Browser Testing Results
+
+| Test | Input | Result |
+|------|-------|--------|
+| Test #1 | Zip: 02467, Ages: 5, 9 | ✅ SUCCESS - Complete plan generated |
+| Test #2 | Zip: 03303, Ages: 1, 3 | ⚠️ API Rate Limited (external Gemini quota) |
+
+**Key Verification**: No "Session already exists" error appeared in any test.
+
+---
+
+## Human Tasks Remaining
+
+### Task Priority Summary
+
+| Priority | Tasks | Total Hours |
+|----------|-------|-------------|
+| High | 1 | 1h |
+| Medium | 2 | 2.5h |
+| Low | 2 | 1.5h |
+| **Total** | **5** | **5h** |
+
+### Detailed Task Table
+
+| # | Task | Description | Priority | Hours | Severity |
+|---|------|-------------|----------|-------|----------|
+| 1 | Code Review and PR Merge | Review changes in App.tsx, client.ts, handlers.ts, client.test.ts, smoke.spec.tsx. Verify fix logic and merge to main branch. | High | 1h | Critical |
+| 2 | Production Deployment Verification | Deploy to staging/production environment and verify the bug fix works with real ADK backend. Confirm no "Session already exists" errors occur. | Medium | 2h | High |
+| 3 | Additional E2E Testing | Perform additional E2E tests with various inputs when Gemini API quota resets. Test edge cases like empty ages, invalid zips, etc. | Medium | 0.5h | Medium |
+| 4 | Documentation Updates | Update CHANGELOG.md with the bug fix entry. Consider adding troubleshooting section to README if needed. | Low | 0.5h | Low |
+| 5 | Address React act() Warnings | Review and address React act() warnings in test output. These are non-blocking but should be cleaned up for code quality. | Low | 1h | Low |
+
+**Total Remaining Hours: 5h** (matches pie chart)
+
+---
+
+## Comprehensive Development Guide
+
+### System Prerequisites
+
+| Requirement | Version | Purpose |
+|-------------|---------|---------|
+| Node.js | 20.x+ | Frontend runtime and npm |
+| npm | 10+ | Package management |
+| Python | 3.12+ | Backend ADK runtime |
+| Google API Key | - | Required for Gemini AI (backend) |
 
 ### Environment Setup
 
-1. **Clone the repository**
-   ```bash
-   git clone <repository-url>
-   cd blitzy-weekend-planner-ai-agent
-   ```
-
-2. **Install frontend dependencies**
-   ```bash
-   cd frontend
-   npm install
-   ```
-
-3. **Configure environment** (optional for local development)
-   ```bash
-   cp .env.example .env.local
-   # Edit .env.local to set VITE_API_BASE_URL if needed
-   # Default: http://localhost:8000 (ADK backend)
-   ```
-
-### Running the Application
-
-1. **Start the ADK backend** (requires separate terminal)
-   ```bash
-   # From repository root
-   cd WeekendPlanner
-   source ../venv/bin/activate
-   pip install -r ../requirements.txt
-   adk web
-   # Server starts at http://localhost:8000
-   ```
-
-2. **Start the frontend development server**
-   ```bash
-   cd frontend
-   npm run dev
-   # Opens at http://localhost:5173
-   ```
-
-### Verification Commands
+#### 1. Clone and Navigate to Repository
 
 ```bash
-# TypeScript type checking
+cd /tmp/blitzy/blitzy-weekend-planner-ai-agent/blitzydb6f65891
+```
+
+#### 2. Backend Setup (Python/ADK)
+
+```bash
+# Activate virtual environment
+source venv/bin/activate
+
+# Install dependencies (if not already installed)
+pip install -r requirements.txt
+
+# Create .env file from template
+cp .env.example .env
+
+# Edit .env and add your Google API key
+# GOOGLE_API_KEY=your_api_key_here
+```
+
+#### 3. Frontend Setup (React/Vite)
+
+```bash
+cd frontend
+
+# Install dependencies
+npm install
+
+# Create local environment (optional - uses default localhost:8000)
+cp .env.example .env.local
+```
+
+### Dependency Installation
+
+#### Backend Dependencies
+```bash
+# From repository root, with venv activated
+pip install -r requirements.txt
+```
+
+**Expected Output**: Successfully installed google-adk, google-genai, google-cloud-aiplatform, python-dotenv, requests
+
+#### Frontend Dependencies
+```bash
+cd frontend
+npm install
+```
+
+**Expected Output**: No errors, packages installed successfully
+
+### Application Startup
+
+#### Start Backend (ADK Server)
+```bash
+# From repository root, with venv activated
+source venv/bin/activate
+adk web
+```
+
+**Expected Output**: 
+```
+Starting ADK server on http://localhost:8000
+```
+
+#### Start Frontend (Development Server)
+```bash
+# In a new terminal
+cd frontend
+npm run dev
+```
+
+**Expected Output**:
+```
+VITE v5.4.21  ready in XXX ms
+➜  Local:   http://localhost:5173/
+```
+
+### Verification Steps
+
+#### 1. Verify TypeScript Compilation
+```bash
+cd frontend
 npm run lint
+```
+**Expected**: Exit code 0, no errors
 
-# Run all tests
-npm run test
+#### 2. Run Test Suite
+```bash
+cd frontend
+CI=true npm test
+```
+**Expected**: "Tests: 113 passed"
 
-# Run tests with coverage
-npm run test:coverage
-
-# Production build
+#### 3. Verify Build
+```bash
+cd frontend
 npm run build
-
-# Preview production build
-npm run preview
 ```
+**Expected**: Build completes successfully with output in `dist/` folder
 
-### Expected Test Output
+#### 4. Verify Bug Fix (No createSession in App.tsx)
+```bash
+grep -n "createSession" frontend/src/App.tsx
 ```
-Test Files  7 passed (7)
-     Tests  113 passed (113)
-  Duration  ~5s
-```
+**Expected**: No output (no matches found)
 
-### Troubleshooting
+### Example Usage
 
-| Issue | Solution |
-|-------|----------|
-| Tests fail with timeout | Ensure no other process uses ports 5173/8000 |
-| "Session already exists" error | Verify App.tsx doesn't import/call createSession |
-| Build fails | Run `npm install` to ensure all deps installed |
-| TypeScript errors | Check Node.js version is v20+ |
+#### Testing the Application
+1. Start the backend: `adk web` (requires valid GOOGLE_API_KEY)
+2. Start the frontend: `npm run dev`
+3. Open http://localhost:5173
+4. Enter a zip code (e.g., "10001")
+5. Optionally enter kids ages (e.g., "5, 9")
+6. Click "Generate Plan"
+7. Verify no "Session already exists" error appears
+
+#### API Flow Verification
+The fixed application uses a two-step API flow:
+1. **Session Creation**: `POST /apps/WeekendPlanner/users/{userId}/sessions/{sessionId}` with empty body
+2. **Message Sending**: `POST /run_sse` with `app_name`, `user_id`, `session_id`, and `new_message`
 
 ---
 
@@ -227,68 +255,73 @@ Test Files  7 passed (7)
 
 | Risk | Severity | Likelihood | Mitigation |
 |------|----------|------------|------------|
-| React act() warnings in tests | Low | Medium | Non-blocking; improve test async handling in future |
-| Uncovered lines in client.ts (error paths) | Low | Low | Add more edge case tests when time permits |
-
-### Integration Risks
-
-| Risk | Severity | Likelihood | Mitigation |
-|------|----------|------------|------------|
-| Live ADK backend behavior differs from mocks | Medium | Low | Test against live backend before production deployment |
-| API contract changes | Low | Low | Mock handlers align with documented ADK API |
+| React act() warnings in tests | Low | High | Non-blocking; wrap async state updates in act() |
+| SSE parsing edge cases | Low | Low | Added error handling for malformed SSE responses |
 
 ### Operational Risks
 
 | Risk | Severity | Likelihood | Mitigation |
 |------|----------|------------|------------|
-| Deployment process not documented | Low | Medium | Follow standard Vite/React deployment procedures |
+| Backend dependency on ADK server | Medium | Medium | Clear error message when backend unavailable |
+| Gemini API rate limits (20 req/day free tier) | Medium | High | Upgrade to paid tier or implement request queuing |
+
+### Integration Risks
+
+| Risk | Severity | Likelihood | Mitigation |
+|------|----------|------------|------------|
+| ADK API changes | Low | Low | API client is isolated in client.ts for easy updates |
+| CORS issues in production | Medium | Low | Vite proxy configured; verify production CORS headers |
 
 ---
 
-## Human Tasks Remaining
+## Git Repository Analysis
 
-### High Priority (Immediate)
+### Branch Information
+- **Branch**: `blitzy-db6f6589-1c36-43bd-a258-fe61eb21515b`
+- **Commits from main**: 4
+- **Files changed**: 7 (5 code + 2 documentation)
 
-| # | Task | Hours | Action Steps |
-|---|------|-------|--------------|
-| 1 | Code Review | 0.5 | Review the diff in `frontend/src/App.tsx`; verify fix logic is correct |
-| 2 | Production Deployment | 0.5 | Build with `npm run build`; deploy `dist/` folder to hosting |
-| 3 | Live E2E Testing | 1.0 | Test against live Google ADK backend to confirm fix works in production |
-| | **Total** | **2.0** | |
+### Code Changes
+- **Lines added**: 869
+- **Lines removed**: 1,268
+- **Net change**: -399 (code simplification)
 
-### Low Priority (Future Improvements)
-
-| # | Task | Hours | Notes |
-|---|------|-------|-------|
-| 1 | Fix React act() warnings in E2E tests | 2.0 | Improve async handling in tests (non-blocking) |
-| 2 | Increase client.ts test coverage | 3.0 | Cover error path edge cases |
-| 3 | Add integration test with real backend | 4.0 | Create test that calls actual ADK endpoint |
+### Commit History
+```
+8b61a0f Fix duplicate session creation error - complete solution
+88efbc7 Adding Blitzy Technical Specifications
+157b318 Adding Blitzy Project Guide: Project Status and Human Tasks Remaining
+b9dc1c5 fix(frontend): remove redundant createSession call causing duplicate session error
+```
 
 ---
 
-## Repository Structure
+## Screenshots
 
-```
-blitzy-weekend-planner-ai-agent/
-├── frontend/                 # React/Vite frontend (affected by this fix)
-│   ├── src/
-│   │   ├── App.tsx          # ⚡ MODIFIED - Bug fix applied here
-│   │   ├── api/client.ts    # API client (unchanged)
-│   │   ├── components/      # UI components (unchanged)
-│   │   ├── __tests__/       # Test suites (unchanged)
-│   │   └── __mocks__/       # MSW mock handlers (unchanged)
-│   ├── e2e/                  # E2E smoke tests (unchanged)
-│   ├── package.json
-│   └── vite.config.ts
-├── WeekendPlanner/           # Python ADK backend (unchanged)
-├── requirements.txt          # Python dependencies
-└── README.md                 # Project documentation
-```
+E2E browser testing screenshots are saved in:
+`/tmp/blitzy/blitzy-weekend-planner-ai-agent/blitzydb6f65891/blitzy/screenshots/`
+
+| File | Description |
+|------|-------------|
+| `test1_success_zip02467_ages5_9.png` | Successful plan generation |
+| `test2_api_rate_limit.png` | API rate limit response |
+| `test2_rate_limit_zip03303_ages1_3.png` | Rate limit during second test |
 
 ---
 
 ## Conclusion
 
-This bug fix successfully resolves the duplicate session creation error that was causing 100% failure rate for plan generation. The fix is minimal, targeted, and thoroughly tested with 113 passing tests and comprehensive code coverage. The remaining work consists of human review, deployment, and live environment testing.
+The bug fix for the "Session already exists" error has been successfully implemented and verified. The primary fix (removing redundant `createSession()` call) was implemented as specified in the Agent Action Plan. An additional fix was discovered and implemented in `client.ts` to use the correct `/run_sse` endpoint for message sending.
 
-**Status**: Production-ready pending human review and deployment.
+**Key Outcomes**:
+- ✅ Bug eliminated - no more "Session already exists" errors
+- ✅ All 113 tests passing
+- ✅ Code compiles and builds successfully
+- ✅ E2E testing confirmed fix works
+
+**Remaining Work** (5 hours):
+- Code review and PR merge (1h)
+- Production deployment verification (2h)
+- Additional E2E testing (0.5h)
+- Documentation updates (0.5h)
+- Address React act() warnings (1h)
