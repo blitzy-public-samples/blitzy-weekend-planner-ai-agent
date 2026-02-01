@@ -7,7 +7,7 @@
  * 
  * The API uses a two-step session-based flow:
  * 1. Create session with empty body: POST /apps/WeekendPlanner/users/{userId}/sessions/{sessionId}
- * 2. Send message with new_message: POST to the same endpoint
+ * 2. Send message via POST to /run_sse endpoint with app_name, user_id, session_id, and new_message
  * 
  * @module handlers
  */
@@ -97,6 +97,18 @@ const mockPlanResponse: MockADKEvent[] = [
   }
 ];
 
+/**
+ * Converts an array of ADK events to Server-Sent Events (SSE) format.
+ * The /run_sse endpoint returns responses in SSE format where each event
+ * is prefixed with "data: " followed by a JSON object.
+ * 
+ * @param events - Array of ADK events to convert
+ * @returns SSE-formatted string
+ */
+function formatAsSSE(events: MockADKEvent[]): string {
+  return events.map(event => `data: ${JSON.stringify(event)}`).join('\n\n') + '\n\n';
+}
+
 // ============================================================================
 // Success Handlers
 // ============================================================================
@@ -105,21 +117,17 @@ const mockPlanResponse: MockADKEvent[] = [
  * Default request handlers for MSW that mock successful API responses.
  * 
  * Includes handlers for the two-step session-based API flow:
- * - POST /apps/WeekendPlanner/users/:userId/sessions/:sessionId
- *   - Step 1 (session creation): Empty body returns { status: 'created' }
- *   - Step 2 (message sending): Body with new_message returns mock plan response
+ * - POST /apps/WeekendPlanner/users/:userId/sessions/:sessionId - Session creation (empty body)
+ * - POST /run_sse - Message sending with app_name, user_id, session_id, and new_message
  * 
- * Uses explicit URL to match the API client's requests to http://localhost:8000.
+ * Uses explicit URL to match the API client's requests to /api.
  */
 export const handlers = [
   /**
-   * Handler for POST /apps/WeekendPlanner/users/:userId/sessions/:sessionId - Session endpoint.
-   * 
-   * This handler supports the two-step session flow as per ADK conventions:
-   * - Step 1 (session creation): Empty body {} - returns { status: 'created' }
-   * - Step 2 (message sending): Body with new_message - returns mock plan response
+   * Handler for POST /apps/WeekendPlanner/users/:userId/sessions/:sessionId - Session creation endpoint.
+   * Returns success when session is created with empty body.
    */
-  http.post('http://localhost:8000/apps/WeekendPlanner/users/:userId/sessions/:sessionId', async ({ request }) => {
+  http.post('/api/apps/WeekendPlanner/users/:userId/sessions/:sessionId', async ({ request }) => {
     // Try to parse the request body
     let body: Record<string, unknown> | null = null;
     try {
@@ -136,7 +144,7 @@ export const handlers = [
     const isEmpty = !body || Object.keys(body).length === 0;
     
     if (isEmpty) {
-      // Step 1: Session creation - return success with status: 'created'
+      // Session creation - return success with status: 'created'
       return HttpResponse.json({ status: 'created' }, {
         status: 200,
         headers: {
@@ -145,20 +153,57 @@ export const handlers = [
       });
     }
 
-    // Check if this is a message request (has new_message)
-    if (body && 'new_message' in body) {
-      // Step 2: Message sending - return mock plan response
-      return HttpResponse.json(mockPlanResponse, {
-        status: 200,
+    // Non-empty body on session endpoint is an error (should use /run_sse)
+    return HttpResponse.json(
+      { error: 'Invalid request - use /run_sse for messages' },
+      {
+        status: 400,
         headers: {
           'Content-Type': 'application/json'
+        }
+      }
+    );
+  }),
+
+  /**
+   * Handler for POST /run_sse - Message sending endpoint (ADK streaming endpoint).
+   * Returns mock plan response in SSE format when new_message is provided.
+   */
+  http.post('/api/run_sse', async ({ request }) => {
+    // Try to parse the request body
+    let body: Record<string, unknown> | null = null;
+    try {
+      const text = await request.text();
+      if (text && text.trim()) {
+        body = JSON.parse(text);
+      }
+    } catch {
+      // Body parsing failed
+      return HttpResponse.json(
+        { error: 'Invalid JSON' },
+        {
+          status: 400,
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+    }
+
+    // Check if this is a message request (has new_message)
+    if (body && 'new_message' in body) {
+      // Message sending - return mock plan response in SSE format
+      return new HttpResponse(formatAsSSE(mockPlanResponse), {
+        status: 200,
+        headers: {
+          'Content-Type': 'text/event-stream; charset=utf-8'
         }
       });
     }
 
     // Unknown request format - return error
     return HttpResponse.json(
-      { error: 'Invalid request' },
+      { error: 'Invalid request - new_message required' },
       {
         status: 400,
         headers: {
@@ -174,11 +219,7 @@ export const handlers = [
 // ============================================================================
 
 /**
- * Creates an MSW handler that returns a 400 Bad Request response for the session endpoint.
- * 
- * This handler supports the two-step session flow:
- * - Step 1 (session creation): Empty body - returns success with { status: 'created' }
- * - Step 2 (message sending): Body with new_message - returns 400 error
+ * Creates an MSW handler that returns a 400 Bad Request response for the /run_sse endpoint.
  * 
  * Use this handler with server.use() in specific tests to simulate client-side
  * request validation errors from the backend.
@@ -197,28 +238,7 @@ export const handlers = [
  * ```
  */
 export const create400Handler = () => {
-  return http.post('http://localhost:8000/apps/WeekendPlanner/users/:userId/sessions/:sessionId', async ({ request }) => {
-    // Parse body to determine request type
-    let body: Record<string, unknown> | null = null;
-    try {
-      const text = await request.text();
-      if (text && text.trim()) {
-        body = JSON.parse(text);
-      }
-    } catch {
-      body = null;
-    }
-
-    const isEmpty = !body || Object.keys(body).length === 0;
-    
-    if (isEmpty) {
-      // Session creation succeeds
-      return HttpResponse.json({ status: 'created' }, {
-        status: 200,
-        headers: { 'Content-Type': 'application/json' }
-      });
-    }
-
+  return http.post('/api/run_sse', () => {
     // Message request returns 400 error
     return HttpResponse.json(
       { message: 'Invalid request' },
@@ -233,11 +253,7 @@ export const create400Handler = () => {
 };
 
 /**
- * Creates an MSW handler that returns a 500 Internal Server Error response for the session endpoint.
- * 
- * This handler supports the two-step session flow:
- * - Step 1 (session creation): Empty body - returns success with { status: 'created' }
- * - Step 2 (message sending): Body with new_message - returns 500 error
+ * Creates an MSW handler that returns a 500 Internal Server Error response for the /run_sse endpoint.
  * 
  * Use this handler with server.use() in specific tests to simulate server-side
  * errors from the backend ADK server.
@@ -256,28 +272,7 @@ export const create400Handler = () => {
  * ```
  */
 export const create500Handler = () => {
-  return http.post('http://localhost:8000/apps/WeekendPlanner/users/:userId/sessions/:sessionId', async ({ request }) => {
-    // Parse body to determine request type
-    let body: Record<string, unknown> | null = null;
-    try {
-      const text = await request.text();
-      if (text && text.trim()) {
-        body = JSON.parse(text);
-      }
-    } catch {
-      body = null;
-    }
-
-    const isEmpty = !body || Object.keys(body).length === 0;
-    
-    if (isEmpty) {
-      // Session creation succeeds
-      return HttpResponse.json({ status: 'created' }, {
-        status: 200,
-        headers: { 'Content-Type': 'application/json' }
-      });
-    }
-
+  return http.post('/api/run_sse', () => {
     // Message request returns 500 error
     return HttpResponse.json(
       { message: 'Server error' },
@@ -314,7 +309,7 @@ export const create500Handler = () => {
  * ```
  */
 export const createSessionFailureHandler = () => {
-  return http.post('http://localhost:8000/apps/WeekendPlanner/users/:userId/sessions/:sessionId', () => {
+  return http.post('/api/apps/WeekendPlanner/users/:userId/sessions/:sessionId', () => {
     return HttpResponse.json(
       { message: 'Session creation failed' },
       {
@@ -332,157 +327,147 @@ export const createSessionFailureHandler = () => {
 // ============================================================================
 
 /**
- * Creates an MSW handler that returns a successful response after a specified delay.
+ * Creates MSW handlers that return successful responses after a specified delay.
  * Use this handler to test loading states by giving enough time for assertions.
  * 
- * Supports the two-step session flow with delayed responses:
- * - Step 1 (session creation): Empty body - returns { status: 'created' } after delay
- * - Step 2 (message sending): Body with new_message - returns mock plan after delay
+ * Returns an array of handlers for both endpoints:
+ * - Session creation endpoint with delay
+ * - /run_sse endpoint with delay
  * 
  * @param delayMs - Delay in milliseconds before responding (default: 500ms)
- * @returns MSW http.post handler with delayed response
+ * @returns Array of MSW http.post handlers with delayed responses
  * 
  * @example
  * ```typescript
- * server.use(createDelayedHandler(1000)); // 1 second delay
+ * server.use(...createDelayedHandler(1000)); // 1 second delay
  * ```
  */
 export const createDelayedHandler = (delayMs: number = 500) => {
-  return http.post('http://localhost:8000/apps/WeekendPlanner/users/:userId/sessions/:sessionId', async ({ request }) => {
-    await new Promise((resolve) => setTimeout(resolve, delayMs));
-    
-    // Parse body to determine response type
-    let body: Record<string, unknown> | null = null;
-    try {
-      const text = await request.text();
-      if (text && text.trim()) {
-        body = JSON.parse(text);
-      }
-    } catch {
-      body = null;
-    }
-
-    const isEmpty = !body || Object.keys(body).length === 0;
-    
-    if (isEmpty) {
+  return [
+    // Delayed session creation handler
+    http.post('/api/apps/WeekendPlanner/users/:userId/sessions/:sessionId', async () => {
+      await new Promise((resolve) => setTimeout(resolve, delayMs));
       return HttpResponse.json({ status: 'created' }, {
         status: 200,
         headers: { 'Content-Type': 'application/json' }
       });
-    }
-
-    return HttpResponse.json(mockPlanResponse, {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
-    });
-  });
+    }),
+    // Delayed /run_sse handler (returns SSE format)
+    http.post('/api/run_sse', async () => {
+      await new Promise((resolve) => setTimeout(resolve, delayMs));
+      return new HttpResponse(formatAsSSE(mockPlanResponse), {
+        status: 200,
+        headers: { 'Content-Type': 'text/event-stream; charset=utf-8' }
+      });
+    })
+  ];
 };
 
 /**
- * Creates an MSW handler that simulates a timeout by delaying response indefinitely.
+ * Creates MSW handlers that simulate a timeout by delaying response indefinitely.
  * 
- * Note: In practice, this handler will be aborted by the test's AbortController
+ * Note: In practice, these handlers will be aborted by the test's AbortController
  * timeout before completing, allowing timeout handling logic to be tested.
  * 
- * @returns MSW http.post handler that delays response for 60 seconds
+ * @returns Array of MSW http.post handlers that delay response for 60 seconds
  */
 export const createTimeoutHandler = () => {
-  return http.post('http://localhost:8000/apps/WeekendPlanner/users/:userId/sessions/:sessionId', async () => {
-    // Delay longer than the expected 30-second timeout
-    await new Promise((resolve) => setTimeout(resolve, 60000));
-    return HttpResponse.json(mockPlanResponse);
-  });
+  return [
+    http.post('/api/apps/WeekendPlanner/users/:userId/sessions/:sessionId', async () => {
+      // Delay longer than the expected 30-second timeout
+      await new Promise((resolve) => setTimeout(resolve, 60000));
+      return HttpResponse.json({ status: 'created' });
+    }),
+    http.post('/api/run_sse', async () => {
+      // Delay longer than the expected 30-second timeout
+      await new Promise((resolve) => setTimeout(resolve, 60000));
+      return new HttpResponse(formatAsSSE(mockPlanResponse), {
+        status: 200,
+        headers: { 'Content-Type': 'text/event-stream; charset=utf-8' }
+      });
+    })
+  ];
 };
 
 /**
  * Creates an MSW handler that returns malformed JSON to test parse error handling.
  * 
- * Supports the two-step session flow:
- * - Step 1 (session creation): Empty body - returns success with { status: 'created' }
- * - Step 2 (message sending): Body with new_message - returns malformed JSON
- * 
- * @returns MSW http.post handler that returns invalid JSON content on message step
+ * @returns MSW http.post handler for /run_sse that returns invalid JSON content
  */
 export const createMalformedJsonHandler = () => {
-  return http.post('http://localhost:8000/apps/WeekendPlanner/users/:userId/sessions/:sessionId', async ({ request }) => {
-    // First request is session creation, return success
-    let body: Record<string, unknown> | null = null;
-    try {
-      const text = await request.text();
-      if (text && text.trim()) {
-        body = JSON.parse(text);
-      }
-    } catch {
-      body = null;
-    }
-
-    const isEmpty = !body || Object.keys(body).length === 0;
-    
-    if (isEmpty) {
-      // Session creation succeeds
-      return HttpResponse.json({ status: 'created' }, {
-        status: 200,
-        headers: { 'Content-Type': 'application/json' }
-      });
-    }
-
-    // Message request returns malformed JSON
-    return new HttpResponse('not valid json {{{', {
+  return http.post('/api/run_sse', () => {
+    // Message request returns SSE format with malformed JSON data
+    return new HttpResponse('data: not valid json {{{', {
       status: 200,
       headers: {
-        'Content-Type': 'application/json'
+        'Content-Type': 'text/event-stream; charset=utf-8'
       }
     });
   });
 };
 
 /**
- * Creates an MSW handler that simulates a network error on the session endpoint.
+ * Creates MSW handlers that simulate a network error on the API endpoints.
  * 
- * This handler fails immediately on any request (including session creation)
- * to test network error handling scenarios.
+ * Returns handlers for both session and /run_sse endpoints to test
+ * network error handling scenarios.
  * 
- * @returns MSW http.post handler that triggers a network error
+ * @returns Array of MSW http.post handlers that trigger network errors
  */
 export const createNetworkErrorHandler = () => {
-  return http.post('http://localhost:8000/apps/WeekendPlanner/users/:userId/sessions/:sessionId', () => {
-    return HttpResponse.error();
-  });
+  return [
+    http.post('/api/apps/WeekendPlanner/users/:userId/sessions/:sessionId', () => {
+      return HttpResponse.error();
+    }),
+    http.post('/api/run_sse', () => {
+      return HttpResponse.error();
+    })
+  ];
 };
 
 /**
  * Generic error response handler factory.
- * Creates an MSW handler that returns a custom error response for the session endpoint.
+ * Creates MSW handlers that return a custom error response for the API endpoints.
  * 
- * This handler returns the error immediately on any request (useful for testing
- * various error scenarios at different steps of the session flow).
+ * This returns handlers for both endpoints (useful for testing
+ * various error scenarios).
  * 
  * @param status - HTTP status code to return
  * @param body - Response body (will be JSON serialized)
- * @returns MSW http.post handler configured with the specified error response
+ * @returns Array of MSW http.post handlers configured with the specified error response
  * 
  * @example
  * ```typescript
- * server.use(mockErrorResponse(400, { message: 'Invalid input' }));
- * server.use(mockErrorResponse(500, { detail: 'Server error' }));
+ * server.use(...mockErrorResponse(400, { message: 'Invalid input' }));
+ * server.use(...mockErrorResponse(500, { detail: 'Server error' }));
  * ```
  */
 export const mockErrorResponse = (status: number, body: Record<string, unknown>) => {
-  return http.post('http://localhost:8000/apps/WeekendPlanner/users/:userId/sessions/:sessionId', () => {
-    return HttpResponse.json(body, {
-      status,
-      headers: {
-        'Content-Type': 'application/json'
-      }
-    });
-  });
+  return [
+    http.post('/api/apps/WeekendPlanner/users/:userId/sessions/:sessionId', () => {
+      return HttpResponse.json(body, {
+        status,
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+    }),
+    http.post('/api/run_sse', () => {
+      return HttpResponse.json(body, {
+        status,
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+    })
+  ];
 };
 
 /**
- * Pre-configured handler for malformed JSON response testing.
+ * Pre-configured handler for malformed JSON response testing on /run_sse endpoint.
  * Use directly with server.use() instead of calling as a function.
  * 
- * This handler returns malformed JSON immediately on any request
+ * This handler returns malformed JSON on the /run_sse endpoint
  * (useful for testing JSON parse error handling).
  * 
  * @example
@@ -490,7 +475,7 @@ export const mockErrorResponse = (status: number, body: Record<string, unknown>)
  * server.use(mockMalformedJsonHandler);
  * ```
  */
-export const mockMalformedJsonHandler = http.post('http://localhost:8000/apps/WeekendPlanner/users/:userId/sessions/:sessionId', () => {
+export const mockMalformedJsonHandler = http.post('/api/run_sse', () => {
   return new HttpResponse('not valid json {{{', {
     status: 200,
     headers: {
@@ -500,10 +485,10 @@ export const mockMalformedJsonHandler = http.post('http://localhost:8000/apps/We
 });
 
 /**
- * Pre-configured handler for network error testing.
+ * Pre-configured handler for network error testing on /run_sse endpoint.
  * Use directly with server.use() instead of calling as a function.
  * 
- * This handler triggers a network error immediately on any request
+ * This handler triggers a network error on the /run_sse endpoint
  * (useful for testing network failure scenarios).
  * 
  * @example
@@ -511,7 +496,7 @@ export const mockMalformedJsonHandler = http.post('http://localhost:8000/apps/We
  * server.use(mockNetworkErrorHandler);
  * ```
  */
-export const mockNetworkErrorHandler = http.post('http://localhost:8000/apps/WeekendPlanner/users/:userId/sessions/:sessionId', () => {
+export const mockNetworkErrorHandler = http.post('/api/run_sse', () => {
   return HttpResponse.error();
 });
 
