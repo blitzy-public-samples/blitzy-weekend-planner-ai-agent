@@ -31,6 +31,21 @@ import { createSession, generatePlan } from '../../api/client';
 import type { GeneratePlanInput } from '../../types';
 
 // ============================================================================
+// Helper Functions
+// ============================================================================
+
+/**
+ * Formats an array of ADK events as a Server-Sent Events (SSE) response string.
+ * The /run_sse endpoint returns responses in this format.
+ * 
+ * @param events - Array of event objects to format
+ * @returns SSE-formatted string with each event prefixed by "data: "
+ */
+function formatAsSSE(events: unknown[]): string {
+  return events.map(event => `data: ${JSON.stringify(event)}`).join('\n\n') + '\n\n';
+}
+
+// ============================================================================
 // Test Data Constants
 // ============================================================================
 
@@ -130,30 +145,16 @@ describe('API Client', () => {
      * Session creation (empty body) succeeds, message sending returns 400.
      */
     it('handles 400 Bad Request with structured error', async () => {
-      // Set up handler that supports two-step flow:
-      // - Session creation (empty body) succeeds
-      // - Message sending (with new_message) returns 400
+      // Set up handlers for two-step flow:
+      // - Session creation succeeds (to session endpoint)
+      // - Message sending returns 400 (to /run_sse endpoint)
       server.use(
-        http.post('http://localhost:8000/apps/:app/users/:user/sessions/:session', async ({ request }) => {
-          // Parse body to determine request type
-          let body: Record<string, unknown> | null = null;
-          try {
-            const text = await request.text();
-            if (text && text.trim()) {
-              body = JSON.parse(text);
-            }
-          } catch {
-            body = null;
-          }
-
-          const isEmpty = !body || Object.keys(body).length === 0;
-          
-          if (isEmpty) {
-            // Session creation succeeds
-            return HttpResponse.json({}, { status: 200 });
-          }
-
-          // Message request returns 400 error
+        // Session creation succeeds
+        http.post('/api/apps/:app/users/:user/sessions/:session', async () => {
+          return HttpResponse.json({}, { status: 200 });
+        }),
+        // Message request returns 400 error
+        http.post('/api/run_sse', async () => {
           return HttpResponse.json(
             { error: 'Invalid input' },
             { status: 400 }
@@ -229,7 +230,8 @@ describe('API Client', () => {
      * 2. Second request sends plan request with new_message payload
      */
     it('creates session before sending plan request', async () => {
-      const requestsReceived: { body: Record<string, unknown> | null }[] = [];
+      const sessionRequests: { body: Record<string, unknown> | null }[] = [];
+      const messageRequests: { body: Record<string, unknown> | null }[] = [];
       
       // Mock response for plan generation (similar to handlers.ts mockPlanResponse)
       const mockPlanResponse = [
@@ -245,9 +247,9 @@ describe('API Client', () => {
       ];
       
       server.use(
-        http.post('http://localhost:8000/apps/:app/users/:user/sessions/:session', 
+        // Handler for session creation endpoint
+        http.post('/api/apps/:app/users/:user/sessions/:session', 
           async ({ request }) => {
-            // Parse body to determine request type
             let body: Record<string, unknown> | null = null;
             try {
               const text = await request.text();
@@ -259,29 +261,44 @@ describe('API Client', () => {
             }
             
             const isEmpty = !body || Object.keys(body).length === 0;
-            requestsReceived.push({ body: isEmpty ? {} : body });
+            sessionRequests.push({ body: isEmpty ? {} : body });
             
-            // Empty body = session creation, return success
-            if (isEmpty) {
-              return HttpResponse.json({ status: 'created' }, { status: 200 });
+            return HttpResponse.json({ status: 'created' }, { status: 200 });
+          }
+        ),
+        // Handler for /run_sse endpoint (message sending) - returns SSE format
+        http.post('/api/run_sse', 
+          async ({ request }) => {
+            let body: Record<string, unknown> | null = null;
+            try {
+              const text = await request.text();
+              if (text && text.trim()) {
+                body = JSON.parse(text);
+              }
+            } catch {
+              body = null;
             }
             
-            // Body with new_message = plan generation, return mock plan
-            return HttpResponse.json(mockPlanResponse, { status: 200 });
+            messageRequests.push({ body });
+            return new HttpResponse(formatAsSSE(mockPlanResponse), {
+              status: 200,
+              headers: { 'Content-Type': 'text/event-stream; charset=utf-8' }
+            });
           }
         )
       );
 
       await generatePlan(validInput);
 
-      // Should have received exactly 2 requests: session creation + message
-      expect(requestsReceived.length).toBe(2);
+      // Should have received 1 session creation request and 1 message request
+      expect(sessionRequests.length).toBe(1);
+      expect(messageRequests.length).toBe(1);
       
-      // First request should have empty body (session creation)
-      expect(requestsReceived[0].body).toEqual({});
+      // Session creation should have empty body
+      expect(sessionRequests[0].body).toEqual({});
       
-      // Second request should have new_message (plan generation)
-      expect(requestsReceived[1].body).toHaveProperty('new_message');
+      // Message request should have new_message (plan generation)
+      expect(messageRequests[0].body).toHaveProperty('new_message');
     });
 
     /**
@@ -307,30 +324,21 @@ describe('API Client', () => {
       ];
       
       server.use(
-        http.post('http://localhost:8000/apps/:app/users/:user/sessions/:session', 
-          async ({ params, request }) => {
+        // Capture session IDs from session creation endpoint
+        http.post('/api/apps/:app/users/:user/sessions/:session', 
+          async ({ params }) => {
             // Capture the session ID from URL params
             sessionIds.push(params.session as string);
-            
-            // Parse body to determine request type
-            let body: Record<string, unknown> | null = null;
-            try {
-              const text = await request.text();
-              if (text && text.trim()) {
-                body = JSON.parse(text);
-              }
-            } catch {
-              body = null;
-            }
-            
-            const isEmpty = !body || Object.keys(body).length === 0;
-            
-            // Return appropriate response based on request type
-            if (isEmpty) {
-              return HttpResponse.json({ status: 'created' }, { status: 200 });
-            }
-            
-            return HttpResponse.json(mockPlanResponse, { status: 200 });
+            return HttpResponse.json({ status: 'created' }, { status: 200 });
+          }
+        ),
+        // Handler for /run_sse endpoint - returns SSE format
+        http.post('/api/run_sse', 
+          async () => {
+            return new HttpResponse(formatAsSSE(mockPlanResponse), {
+              status: 200,
+              headers: { 'Content-Type': 'text/event-stream; charset=utf-8' }
+            });
           }
         )
       );
@@ -339,10 +347,9 @@ describe('API Client', () => {
       await generatePlan(validInput);
       await generatePlan(validInput);
 
-      // Should have at least 2 unique session IDs (2 calls × 2 requests each = 4 total)
-      // Each call should use the same session ID for both requests
+      // Should have 2 unique session IDs (1 per call)
       const uniqueIds = [...new Set(sessionIds)];
-      expect(uniqueIds.length).toBeGreaterThanOrEqual(2);
+      expect(uniqueIds.length).toBe(2);
       
       // Session IDs should be in UUID format (v4 UUID pattern)
       const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -374,9 +381,15 @@ describe('API Client', () => {
       ];
       
       server.use(
-        http.post('http://localhost:8000/apps/:app/users/:user/sessions/:session', 
+        // Handler for session creation
+        http.post('/api/apps/:app/users/:user/sessions/:session', 
+          async () => {
+            return HttpResponse.json({ status: 'created' }, { status: 200 });
+          }
+        ),
+        // Handler for /run_sse - capture the message payload here, returns SSE format
+        http.post('/api/run_sse', 
           async ({ request }) => {
-            // Parse body to determine request type
             let body: Record<string, unknown> | null = null;
             try {
               const text = await request.text();
@@ -387,19 +400,15 @@ describe('API Client', () => {
               body = null;
             }
             
-            const isEmpty = !body || Object.keys(body).length === 0;
-            
-            // Capture the message payload (not the empty session creation request)
-            if (!isEmpty && body && body.new_message) {
+            // Capture the message payload
+            if (body && body.new_message) {
               capturedPayload = body;
             }
             
-            // Return appropriate response based on request type
-            if (isEmpty) {
-              return HttpResponse.json({ status: 'created' }, { status: 200 });
-            }
-            
-            return HttpResponse.json(mockPlanResponse, { status: 200 });
+            return new HttpResponse(formatAsSSE(mockPlanResponse), {
+              status: 200,
+              headers: { 'Content-Type': 'text/event-stream; charset=utf-8' }
+            });
           }
         )
       );
@@ -457,7 +466,7 @@ describe('API Client', () => {
     it('handles session creation failure', async () => {
       // Set up handler to return 500 error for session creation
       server.use(
-        http.post('http://localhost:8000/apps/:app/users/:user/sessions/:session', () => {
+        http.post('/api/apps/:app/users/:user/sessions/:session', () => {
           return HttpResponse.json(
             { message: 'Session creation failed' },
             { status: 500 }

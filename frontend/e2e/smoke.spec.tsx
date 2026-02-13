@@ -302,7 +302,7 @@ describe('Weekend Planner E2E Smoke Tests', () => {
      */
     it('shows loading state when form is submitted', async () => {
       // Use delayed handler to ensure loading state is visible
-      server.use(createDelayedHandler(2000));
+      server.use(...createDelayedHandler(2000));
       
       const user = userEvent.setup();
       render(<App />);
@@ -321,7 +321,7 @@ describe('Weekend Planner E2E Smoke Tests', () => {
      */
     it('displays loading message "Creating your perfect weekend..."', async () => {
       // Use delayed handler to ensure loading state is visible
-      server.use(createDelayedHandler(2000));
+      server.use(...createDelayedHandler(2000));
       
       const user = userEvent.setup();
       render(<App />);
@@ -681,7 +681,7 @@ describe('Weekend Planner E2E Smoke Tests', () => {
      */
     it('loading state has aria-busy attribute', async () => {
       // Use delayed handler to ensure loading state is visible
-      server.use(createDelayedHandler(500));
+      server.use(...createDelayedHandler(500));
 
       const user = userEvent.setup();
       render(<App />);
@@ -732,7 +732,7 @@ describe('Weekend Planner E2E Smoke Tests', () => {
      */
     it('completes full user journey: fill form → submit → view plan → reset', async () => {
       // Use delayed handler to ensure loading state is visible
-      server.use(createDelayedHandler(500));
+      server.use(...createDelayedHandler(500));
 
       const user = userEvent.setup();
       render(<App />);

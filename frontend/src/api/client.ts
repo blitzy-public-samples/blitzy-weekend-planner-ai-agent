@@ -4,7 +4,7 @@
  * 
  * Uses two-step session-based flow per Google ADK conventions:
  * 1. Create session with empty body POST to /apps/{app}/users/{user}/sessions/{session}
- * 2. Send message with new_message payload to the same endpoint
+ * 2. Send message via POST to /run_sse endpoint with app_name, user_id, session_id, and new_message
  */
 
 import type { GeneratePlanInput, ADKResponse, GeneratePlanResult, ADKEvent, PlanError } from '../types';
@@ -82,6 +82,36 @@ function buildPrompt(input: GeneratePlanInput): string {
   }
 
   return prompt;
+}
+
+/**
+ * Parses a Server-Sent Events (SSE) response into an array of ADK events.
+ * SSE format: Each event is prefixed with "data: " and contains a JSON object.
+ * 
+ * @param responseText - Raw SSE text response from the /run_sse endpoint
+ * @returns Array of parsed ADK events
+ */
+function parseSSEResponse(responseText: string): ADKResponse {
+  const events: ADKEvent[] = [];
+  const lines = responseText.split('\n');
+  
+  for (const line of lines) {
+    // SSE data lines start with "data: " followed by JSON
+    if (line.startsWith('data: ')) {
+      const jsonStr = line.slice(6); // Remove "data: " prefix
+      if (jsonStr.trim()) {
+        try {
+          const event = JSON.parse(jsonStr);
+          events.push(event);
+        } catch {
+          // Skip lines that aren't valid JSON
+          console.warn('Failed to parse SSE event:', jsonStr);
+        }
+      }
+    }
+  }
+  
+  return events;
 }
 
 /**
@@ -205,13 +235,17 @@ export async function generatePlan(
       };
     }
 
-    // Step 2: Send message with new_message payload to the same endpoint
-    const messageResponse = await fetch(url, {
+    // Step 2: Send message via /run_sse endpoint (ADK streaming endpoint)
+    const runUrl = `${API_BASE_URL}/run_sse`;
+    const messageResponse = await fetch(runUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
+        app_name: APP_NAME,
+        user_id: userId,
+        session_id: sessionId,
         new_message: {
           role: 'user',
           parts: [{ text: buildPrompt(input) }]
@@ -238,7 +272,28 @@ export async function generatePlan(
 
     let data: ADKResponse;
     try {
-      data = await messageResponse.json();
+      // The /run_sse endpoint returns Server-Sent Events format
+      // Parse the SSE response to extract ADK events
+      const responseText = await messageResponse.text();
+      data = parseSSEResponse(responseText);
+      
+      // Check if response had SSE data lines that couldn't be parsed
+      const hasDataLines = responseText.includes('data: ');
+      
+      // Verify we got valid events
+      if (data.length === 0) {
+        return {
+          success: false,
+          error: {
+            // If response had data: lines but we couldn't parse them, it's a format error
+            // If response had no data: lines, it's an empty response
+            message: hasDataLines 
+              ? 'Received an unexpected response format' 
+              : 'Received an empty response from the server',
+            statusCode: messageResponse.status
+          }
+        };
+      }
     } catch {
       return {
         success: false,
