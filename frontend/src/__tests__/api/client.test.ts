@@ -41,6 +41,12 @@ import type { GeneratePlanInput } from '../../types';
  * Formats an array of ADK events as a Server-Sent Events (SSE) response string.
  * The /run_sse endpoint returns responses in this format.
  *
+ * Note: This function mirrors the implementation in handlers.ts (L108-109).
+ * It is intentionally duplicated here because handlers.ts does not export
+ * formatAsSSE, and handlers.ts is a shared mock module not modified by this
+ * test effort. The local copy also uses a more permissive `unknown[]` type
+ * signature (vs. handlers.ts `MockADKEvent[]`) for test flexibility.
+ *
  * @param events - Array of event objects to format
  * @returns SSE-formatted string with each event prefixed by "data: "
  */
@@ -898,6 +904,40 @@ describe('API Client', () => {
       // Default branch: 'Request failed with status 300'
       expect(result.error!.message).toBe('Request failed with status 300');
     });
+
+    it('[EqualityOperator L364] getErrorMessage status 399 is NOT in 4xx range — returns generic message', async () => {
+      server.use(
+        http.post(RUN_SSE_URL, () => {
+          // Status 399 is < 400 — does NOT enter the >= 400 && < 500 branch.
+          // Kills comparison-operator mutants on the `>= 400` condition (e.g., `> 400`).
+          return new HttpResponse('', { status: 399 });
+        })
+      );
+
+      const result = await generatePlan(validInput);
+      expect(result.success).toBe(false);
+      // 399 is below the 4xx threshold — falls through to the default return
+      expect(result.error!.message).toBe('Request failed with status 399');
+      expect(result.error!.statusCode).toBe(399);
+    });
+
+    it('[EqualityOperator L364] getErrorMessage status 499 IS in 4xx range — returns client error', async () => {
+      server.use(
+        http.post(RUN_SSE_URL, () => {
+          // Status 499 is >= 400 && < 500 — enters the client-error branch.
+          // Kills comparison-operator mutants on the `< 500` condition (e.g., `<= 500`).
+          // Empty body ensures the fallback 'Unknown client error' message is returned
+          // at client.ts L374: `${body || 'Unknown client error'}`.
+          return new HttpResponse('', { status: 499 });
+        })
+      );
+
+      const result = await generatePlan(validInput);
+      expect(result.success).toBe(false);
+      // 499 is within 4xx range — empty body triggers fallback 'Unknown client error'
+      expect(result.error!.message).toBe('Invalid request: Unknown client error');
+      expect(result.error!.statusCode).toBe(499);
+    });
   });
 
   // ==========================================================================
@@ -942,8 +982,11 @@ describe('API Client', () => {
       const result = await generatePlan(validInput);
       expect(result.success).toBe(false);
       expect(result.error).toBeDefined();
-      // The error message from HttpResponse.error() triggers the network/TypeError handler
-      expect(result.error!.message).toBeDefined();
+      // HttpResponse.error() triggers a TypeError with "Failed to fetch" which matches
+      // the error.message.includes('fetch') check at client.ts L328, producing the
+      // network-error message from L332. This assertion kills StringLiteral mutants
+      // on the error message string by verifying actual content, not just existence.
+      expect(result.error!.message).toContain("Couldn't reach");
     });
 
     it('[ConditionalExpression L338] TypeError gets connection blocked message', async () => {
