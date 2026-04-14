@@ -527,7 +527,7 @@ describe('App', () => {
   // Phase 9 — Network Error Handling
   // -------------------------------------------------------------------------
 
-  it('[ConditionalExpression L328] network error displays connectivity message', async () => {
+  it('[ConditionalExpression L97] network error displays connectivity message', async () => {
     setupNetworkErrorHandlers();
 
     const user = userEvent.setup();
@@ -535,9 +535,16 @@ describe('App', () => {
     await submitForm(user);
 
     // Network errors produce a "Couldn't reach the backend" message
-    // from client.ts catch block, then routed through ErrorDisplay
+    // from client.ts catch block, then routed through ErrorDisplay.
+    // App.tsx L97: planResult.success is false → enters else branch → sets error state.
     const alert = await screen.findByRole('alert');
     expect(alert).toBeInTheDocument();
+
+    // Verify a network-specific message is shown, not a generic/input error —
+    // this catches StringLiteral mutants in the error message pipeline
+    expect(alert).toHaveTextContent(
+      /couldn.*t reach the backend|connection blocked|failed to fetch/i,
+    );
   });
 
   // -------------------------------------------------------------------------

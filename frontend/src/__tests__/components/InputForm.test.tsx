@@ -795,7 +795,7 @@ describe('InputForm', () => {
      * Targets `num <= 0` being mutated to `num < 0` which would wrongly accept age 0.
      * Verifies age=0 is rejected and the exact validation error message is displayed.
      */
-    it('[EqualityOperator L80] age > 0 boundary: age=0 rejected, age=1 accepted', async () => {
+    it('[EqualityOperator L80] age > 0 boundary: age=0 rejected (catches mutation to num < 0)', async () => {
       const user = userEvent.setup();
       render(<InputForm onSubmit={mockOnSubmit} onReset={mockOnReset} />);
 

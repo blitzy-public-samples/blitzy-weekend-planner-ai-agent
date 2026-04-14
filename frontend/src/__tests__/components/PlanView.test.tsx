@@ -698,7 +698,7 @@ Disclaimer: Results are based on AI research and should be verified for accuracy
       expect(screen.getByText(/Only one activity/i)).toBeInTheDocument();
     });
 
-    it('[ConditionalExpression L82] null planText renders empty state', () => {
+    it('[ConditionalExpression L245] null planText renders empty state', () => {
       const nullPlanResult: GeneratePlanResult = {
         success: true,
         planText: null as unknown as string,
@@ -711,7 +711,7 @@ Disclaimer: Results are based on AI research and should be verified for accuracy
       expect(screen.getByText(/No plan content available/i)).toBeInTheDocument();
     });
 
-    it('[ConditionalExpression L88] whitespace-only planText renders empty state', () => {
+    it('[ConditionalExpression L245] whitespace-only planText renders empty state', () => {
       const whitespaceResult: GeneratePlanResult = {
         success: true,
         planText: '   \n  \n  ',
@@ -728,7 +728,7 @@ Disclaimer: Results are based on AI research and should be verified for accuracy
     // Phase 6: ActivityCard Content Checks
     // ========================================================================
 
-    it('[StringLiteral] individual ActivityCard shows activity title correctly', () => {
+    it('[StringLiteral L187] individual ActivityCard shows activity title correctly', () => {
       const multiActivityResult: GeneratePlanResult = {
         success: true,
         planText: '- Visit the zoo\nGreat for kids and families\n- Explore the aquarium\nAmazing marine life exhibits\n- Enjoy the botanical garden\nBeautiful seasonal flowers',
@@ -754,7 +754,7 @@ Disclaimer: Results are based on AI research and should be verified for accuracy
       expect(screen.getByText(/Beautiful seasonal flowers/i)).toBeInTheDocument();
     });
 
-    it('[ArithmeticOperator] activity cards have correct numbering badges', () => {
+    it('[ArithmeticOperator L195] activity cards have correct numbering badges', () => {
       const numberedBadgeResult: GeneratePlanResult = {
         success: true,
         planText: '- Alpha activity\n- Beta activity\n- Gamma activity\n- Delta activity',

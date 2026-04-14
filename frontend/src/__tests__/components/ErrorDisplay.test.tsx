@@ -546,7 +546,7 @@ describe('ErrorDisplay', () => {
       ).toBeInTheDocument();
     });
 
-    it('[StringLiteral L66] server error type returns exact message', () => {
+    it('[StringLiteral L65] server error type returns exact message', () => {
       render(<ErrorDisplay error={{ message: 'x', type: 'server' }} />);
       expect(
         screen.getByText(

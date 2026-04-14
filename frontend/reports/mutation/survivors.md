@@ -101,8 +101,23 @@ if (report.files) {
           line: mutant.location.start.line,
           column: mutant.location.start.column,
           mutatorName: mutant.mutatorName,
-          original: mutant.replacement || mutant.description || '(see source)',
-          mutated: mutant.replacement || mutant.description || '(see mutation report)',
+          original: (() => {
+            try {
+              const srcLines = fileData.source.split('\n');
+              const sl = mutant.location.start.line - 1;
+              const sc = mutant.location.start.column - 1;
+              const el = mutant.location.end.line - 1;
+              const ec = mutant.location.end.column;
+              if (sl === el) {
+                return srcLines[sl].substring(sc, ec);
+              }
+              // Multi-line mutation: return first affected line from start column
+              return srcLines[sl].substring(sc);
+            } catch {
+              return '(see source)';
+            }
+          })(),
+          mutated: mutant.replacement || '(see mutation report)',
         });
       }
     }
