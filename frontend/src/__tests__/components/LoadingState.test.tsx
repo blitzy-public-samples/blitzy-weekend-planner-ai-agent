@@ -95,4 +95,152 @@ describe('LoadingState', () => {
     // Also verify the aria-label is present for screen reader context
     expect(statusElement).toHaveAttribute('aria-label', 'Loading weekend plan');
   });
+
+  // =========================================================================
+  // Targeted Mutation-Testing (Stryker) Mutant-Killing Tests
+  // =========================================================================
+
+  // Phase 1: Skeleton Card Count Mutant Killers
+
+  /**
+   * Catches ArithmeticOperator mutants that change the exact count of
+   * skeleton cards rendered (e.g., removing or duplicating a card JSX block).
+   * The component must render exactly 4 bg-white.rounded-xl card containers.
+   */
+  it('[ArithmeticOperator L53] renders exactly 4 skeleton cards', () => {
+    const { container } = render(<LoadingState />);
+
+    // Query all skeleton card containers by their distinctive class combination
+    const cards = container.querySelectorAll('.bg-white.rounded-xl');
+
+    // Exact count assertion — catches mutants that add/remove card blocks
+    expect(cards.length).toBe(4);
+  });
+
+  /**
+   * Catches ArithmeticOperator mutants that alter the total number of
+   * animate-pulse skeleton bar elements across all cards.
+   * Cards 1-3 each have 4 bars (1 header + 3 content), Card 4 has 3 bars
+   * (1 header + 2 content). Total: 4 + 4 + 4 + 3 = 15.
+   */
+  it('[ArithmeticOperator L55] renders exactly 15 animate-pulse skeleton elements', () => {
+    const { container } = render(<LoadingState />);
+
+    const skeletonElements = container.querySelectorAll('.animate-pulse');
+
+    // Exact total: (4 + 4 + 4 + 3) = 15 animate-pulse elements
+    expect(skeletonElements.length).toBe(15);
+  });
+
+  // Phase 2: CSS Class Name Mutant Killers
+
+  /**
+   * Catches StringLiteral mutants that would change the animate-pulse class
+   * string on skeleton placeholder elements identified via bg-gray-200.
+   */
+  it('[StringLiteral L55] skeleton elements have animate-pulse class', () => {
+    const { container } = render(<LoadingState />);
+
+    const grayElements = container.querySelectorAll('.bg-gray-200');
+
+    // Every bg-gray-200 skeleton element must also carry animate-pulse
+    expect(grayElements.length).toBeGreaterThan(0);
+    grayElements.forEach((el) => {
+      expect(el).toHaveClass('animate-pulse');
+    });
+  });
+
+  /**
+   * Catches StringLiteral mutants that would change the bg-gray-200 background
+   * color class on skeleton placeholder elements identified via animate-pulse.
+   */
+  it('[StringLiteral L55] skeleton elements have bg-gray-200 class for skeleton appearance', () => {
+    const { container } = render(<LoadingState />);
+
+    const pulseElements = container.querySelectorAll('.animate-pulse');
+
+    // Every animate-pulse element must also carry bg-gray-200 for skeleton look
+    expect(pulseElements.length).toBeGreaterThan(0);
+    pulseElements.forEach((el) => {
+      expect(el).toHaveClass('bg-gray-200');
+    });
+  });
+
+  // Phase 3: ARIA Attribute Value Mutant Killers
+
+  /**
+   * Catches BooleanLiteral mutants that flip aria-busy from "true" to "false".
+   * Explicitly asserts the exact value and negates the opposite.
+   */
+  it('[BooleanLiteral L41] aria-busy is exactly "true" not "false"', () => {
+    render(<LoadingState />);
+
+    const statusEl = screen.getByRole('status');
+
+    // Positive assertion: aria-busy must be "true"
+    expect(statusEl).toHaveAttribute('aria-busy', 'true');
+    // Negative assertion: catches BooleanLiteral true→false mutant
+    expect(statusEl.getAttribute('aria-busy')).not.toBe('false');
+  });
+
+  /**
+   * Catches StringLiteral mutants that would change the role attribute value.
+   * Explicit existence check via getByRole ensures the exact role string is "status".
+   */
+  it('[StringLiteral L42] role attribute is exactly "status"', () => {
+    render(<LoadingState />);
+
+    const statusEl = screen.getByRole('status');
+
+    // getByRole('status') will throw if no element has role="status"
+    expect(statusEl).toBeInTheDocument();
+    // Double-check attribute value to catch string-literal mutations on role
+    expect(statusEl).toHaveAttribute('role', 'status');
+  });
+
+  /**
+   * Catches StringLiteral mutants that would alter the aria-label text.
+   * Uses exact string match (not regex) for maximum mutation-killing precision.
+   */
+  it('[StringLiteral L43] aria-label is exactly "Loading weekend plan"', () => {
+    render(<LoadingState />);
+
+    const statusEl = screen.getByRole('status');
+
+    // Exact string match — catches any StringLiteral mutant on the label
+    expect(statusEl).toHaveAttribute('aria-label', 'Loading weekend plan');
+    // Ensure the attribute is not an empty string (Stryker StringLiteral → "")
+    expect(statusEl.getAttribute('aria-label')).not.toBe('');
+  });
+
+  // Phase 4: Element Count Structural Integrity
+
+  /**
+   * Catches per-card ArithmeticOperator mutants that add or remove individual
+   * skeleton bar elements within a specific card. Validates the internal
+   * structure of each of the four skeleton cards independently.
+   *
+   * Expected structure:
+   *   Card 1: 1 header (h-6) + 3 content lines (h-4) = 4 animate-pulse
+   *   Card 2: 1 header (h-6) + 3 content lines (h-4) = 4 animate-pulse
+   *   Card 3: 1 header (h-6) + 3 content lines (h-4) = 4 animate-pulse
+   *   Card 4: 1 header (h-6) + 2 content lines (h-4) = 3 animate-pulse
+   */
+  it('[ArithmeticOperator L55] each skeleton card contains expected number of skeleton bars', () => {
+    const { container } = render(<LoadingState />);
+
+    const cards = container.querySelectorAll('.bg-white.rounded-xl');
+
+    // Verify exactly 4 cards are present before checking internals
+    expect(cards.length).toBe(4);
+
+    // Card 1: header + 3 content lines = 4 animate-pulse elements
+    expect(cards[0].querySelectorAll('.animate-pulse').length).toBe(4);
+    // Card 2: header + 3 content lines = 4 animate-pulse elements
+    expect(cards[1].querySelectorAll('.animate-pulse').length).toBe(4);
+    // Card 3: header + 3 content lines = 4 animate-pulse elements
+    expect(cards[2].querySelectorAll('.animate-pulse').length).toBe(4);
+    // Card 4: header + 2 content lines = 3 animate-pulse elements
+    expect(cards[3].querySelectorAll('.animate-pulse').length).toBe(3);
+  });
 });
