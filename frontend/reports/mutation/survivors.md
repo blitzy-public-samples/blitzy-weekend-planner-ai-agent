@@ -24,6 +24,52 @@
 | `src/components/LoadingState.tsx` | 1 | 0 | 1 | 0 | 0 | 100.00% |
 | `src/components/RawOutput.tsx` | 17 | 0 | 17 | 0 | 0 | 100.00% |
 
+## Extraction Method
+
+The entries below were extracted programmatically from the Stryker JSON report
+(`reports/mutation/mutation.json`) produced by the baseline run (Directive 4).
+Mutants with `status === "Survived"` or `status === "NoCoverage"` are considered
+undetected — they represent code paths where no existing test distinguishes the
+original source from the mutated version.
+
+### How to reproduce the extraction
+
+1. Run the baseline mutation test: `npm run test:mutation`
+2. Confirm `reports/mutation/mutation.json` exists
+3. Execute the extraction script below (Node.js ≥ 18)
+
+```javascript
+const { readFileSync } = require('fs');
+
+const report = JSON.parse(
+  readFileSync('reports/mutation/mutation.json', 'utf-8')
+);
+
+const survivors = Object.entries(report.files).flatMap(
+  ([filePath, fileData]) =>
+    fileData.mutants
+      .filter(m => m.status === 'Survived' || m.status === 'NoCoverage')
+      .map(m => ({
+        file: filePath,
+        line: m.location.start.line,
+        column: m.location.start.column,
+        mutatorName: m.mutatorName,
+        original: m.replacement ?? m.description ?? '(see source)',
+        mutated: m.replacement ?? m.description ?? '(see mutation report)',
+      }))
+);
+
+console.log(`Found ${survivors.length} undetected mutant(s)`);
+survivors.forEach((s, i) => {
+  console.log(`#${i + 1} [${s.mutatorName}] ${s.file}:${s.line}:${s.column}`);
+});
+```
+
+The script reads the JSON report, iterates every file's mutant array, and keeps
+only those whose `.status` is `"Survived"` or `"NoCoverage"`. Each match is
+mapped to the five required fields (file path, line/column, mutator name,
+original snippet, mutated snippet) used in the entries that follow.
+
 ## Survived Mutants (status === "Survived")
 
 **Count: 0**
