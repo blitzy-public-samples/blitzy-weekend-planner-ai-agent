@@ -493,4 +493,238 @@ describe('ErrorDisplay', () => {
       expect(screen.getByText(/invalid input parameters/i)).toBeInTheDocument();
     });
   });
+
+  // ============================================================================
+  // MUTATION TESTING — TARGETED MUTANT KILLERS
+  // Appended tests use EXACT string matching (not regex) to catch StringLiteral,
+  // EqualityOperator, ConditionalExpression, and LogicalOperator mutants that
+  // the existing regex-based assertions would not detect.
+  // ============================================================================
+
+  describe('Mutation testing - targeted mutant killers', () => {
+    // ------------------------------------------------------------------
+    // Phase 1: Exact Text Verification (StringLiteral mutant killers)
+    // These use `(content) => content === '...'` matchers to catch mutants
+    // that alter the exact string returned by getUserMessage().
+    // ------------------------------------------------------------------
+
+    it('[StringLiteral L54] network error type returns exact message', () => {
+      render(<ErrorDisplay error={{ message: 'x', type: 'network' }} />);
+      expect(
+        screen.getByText(
+          (content) =>
+            content ===
+            "Couldn't reach the backend. Make sure the ADK server is running with `adk web`"
+        )
+      ).toBeInTheDocument();
+    });
+
+    it('[StringLiteral L56] timeout error type returns exact message', () => {
+      render(<ErrorDisplay error={{ message: 'x', type: 'timeout' }} />);
+      expect(
+        screen.getByText(
+          (content) => content === 'Request timed out. Please try again.'
+        )
+      ).toBeInTheDocument();
+    });
+
+    it('[StringLiteral L58] cors error type returns exact message', () => {
+      render(<ErrorDisplay error={{ message: 'x', type: 'cors' }} />);
+      expect(
+        screen.getByText(
+          (content) => content === 'Connection blocked. See README for proxy setup.'
+        )
+      ).toBeInTheDocument();
+    });
+
+    it('[StringLiteral L60] parse error type returns exact message', () => {
+      render(<ErrorDisplay error={{ message: 'x', type: 'parse' }} />);
+      expect(
+        screen.getByText(
+          (content) => content === 'Received an unexpected response format'
+        )
+      ).toBeInTheDocument();
+    });
+
+    it('[StringLiteral L66] server error type returns exact message', () => {
+      render(<ErrorDisplay error={{ message: 'x', type: 'server' }} />);
+      expect(
+        screen.getByText(
+          (content) =>
+            content === 'Something went wrong on the server. Please try again.'
+        )
+      ).toBeInTheDocument();
+    });
+
+    // ------------------------------------------------------------------
+    // Phase 2: Status-Code Boundary Mutant Killers
+    // Catches EqualityOperator / ComparisonOperator mutants on the
+    // `>= 400`, `< 500`, and `>= 500` comparisons in getUserMessage().
+    // ------------------------------------------------------------------
+
+    it('[EqualityOperator L74] statusCode 400 maps to client error', () => {
+      render(<ErrorDisplay error={{ message: 'test', statusCode: 400 }} />);
+      // 400 >= 400 && 400 < 500 → client branch
+      expect(
+        screen.getByText(
+          (content) => content === 'Invalid request: test'
+        )
+      ).toBeInTheDocument();
+    });
+
+    it('[EqualityOperator L74] statusCode 399 does NOT map to client error', () => {
+      render(
+        <ErrorDisplay error={{ message: 'Some 399 error', statusCode: 399 }} />
+      );
+      // 399 >= 400 is FALSE → skips client & server branches → falls to message
+      // pattern matching → 'some 399 error' matches no pattern → fallback to
+      // original message. Catches >= 400 mutated to > 400 or >= 399.
+      expect(
+        screen.getByText(
+          (content) => content === 'Some 399 error'
+        )
+      ).toBeInTheDocument();
+    });
+
+    it('[EqualityOperator L74] statusCode 499 maps to client error', () => {
+      render(<ErrorDisplay error={{ message: 'test', statusCode: 499 }} />);
+      // 499 >= 400 && 499 < 500 → client branch
+      // Catches < 500 mutated to < 499 or <= 499
+      expect(
+        screen.getByText(
+          (content) => content === 'Invalid request: test'
+        )
+      ).toBeInTheDocument();
+    });
+
+    it('[EqualityOperator L78] statusCode 500 maps to server error', () => {
+      render(<ErrorDisplay error={{ message: 'test', statusCode: 500 }} />);
+      // 500 >= 400 && 500 < 500 → FALSE (500 < 500 is false)
+      // 500 >= 500 → server branch
+      // Catches >= 500 mutated to > 500
+      expect(
+        screen.getByText(
+          (content) =>
+            content === 'Something went wrong on the server. Please try again.'
+        )
+      ).toBeInTheDocument();
+    });
+
+    it('[EqualityOperator L78] statusCode 502 maps to server error', () => {
+      render(<ErrorDisplay error={{ message: 'test', statusCode: 502 }} />);
+      expect(
+        screen.getByText(
+          (content) =>
+            content === 'Something went wrong on the server. Please try again.'
+        )
+      ).toBeInTheDocument();
+    });
+
+    it('[EqualityOperator L78] statusCode 503 maps to server error', () => {
+      render(<ErrorDisplay error={{ message: 'test', statusCode: 503 }} />);
+      expect(
+        screen.getByText(
+          (content) =>
+            content === 'Something went wrong on the server. Please try again.'
+        )
+      ).toBeInTheDocument();
+    });
+
+    it('[EqualityOperator L74] statusCode 403 maps to client error', () => {
+      render(
+        <ErrorDisplay error={{ message: 'Forbidden', statusCode: 403 }} />
+      );
+      expect(
+        screen.getByText(
+          (content) => content === 'Invalid request: Forbidden'
+        )
+      ).toBeInTheDocument();
+    });
+
+    // ------------------------------------------------------------------
+    // Phase 3: Conditional Retry Button (ConditionalExpression killers)
+    // ------------------------------------------------------------------
+
+    it('[ConditionalExpression L195] retry button appears when onRetry is provided', () => {
+      render(
+        <ErrorDisplay
+          error={{ message: 'Error', type: 'server' }}
+          onRetry={vi.fn()}
+        />
+      );
+      expect(
+        screen.getByRole('button', { name: /try again/i })
+      ).toBeInTheDocument();
+    });
+
+    it('[ConditionalExpression L195] retry button absent when onRetry is undefined', () => {
+      render(<ErrorDisplay error={{ message: 'Error', type: 'server' }} />);
+      expect(
+        screen.queryByRole('button', { name: /try again/i })
+      ).not.toBeInTheDocument();
+    });
+
+    // ------------------------------------------------------------------
+    // Phase 4: Error-Type String-Match Mutants
+    // ------------------------------------------------------------------
+
+    it('[StringLiteral L53] network type string is exact match', () => {
+      // Lowercase 'network' hits the correct switch case
+      const { unmount } = render(
+        <ErrorDisplay error={{ message: 'x', type: 'network' }} />
+      );
+      expect(
+        screen.getByText(
+          (content) =>
+            content ===
+            "Couldn't reach the backend. Make sure the ADK server is running with `adk web`"
+        )
+      ).toBeInTheDocument();
+      unmount();
+
+      // Uppercase 'Network' does NOT match the case-sensitive switch, so the
+      // code falls through to message-pattern matching; 'x' matches nothing →
+      // default fallback returns 'x'. Catches mutants that alter the type literal.
+      render(<ErrorDisplay error={{ message: 'x', type: 'Network' }} />);
+      expect(
+        screen.getByText((content) => content === 'x')
+      ).toBeInTheDocument();
+    });
+
+    it('[ConditionalExpression L51] error with undefined type falls through to status code check', () => {
+      // No `type` field → switch is skipped → statusCode 500 >= 500 → server msg
+      // Catches mutant that removes the `if (error.type)` guard
+      render(<ErrorDisplay error={{ message: 'test', statusCode: 500 }} />);
+      expect(
+        screen.getByText(
+          (content) =>
+            content === 'Something went wrong on the server. Please try again.'
+        )
+      ).toBeInTheDocument();
+    });
+
+    // ------------------------------------------------------------------
+    // Phase 5: Default Fallback Mutant Killers
+    // ------------------------------------------------------------------
+
+    it('[StringLiteral L109] default fallback returns original message when no patterns match', () => {
+      render(<ErrorDisplay error={{ message: 'Unique custom message XYZ' }} />);
+      expect(
+        screen.getByText(
+          (content) => content === 'Unique custom message XYZ'
+        )
+      ).toBeInTheDocument();
+    });
+
+    it('[StringLiteral L109] default fallback returns format message when message is empty', () => {
+      // Empty string is falsy → OR fallback triggers
+      // Catches LogicalOperator (||) mutant and StringLiteral mutant
+      render(<ErrorDisplay error={{ message: '' }} />);
+      expect(
+        screen.getByText(
+          (content) => content === 'Received an unexpected response format'
+        )
+      ).toBeInTheDocument();
+    });
+  });
 });
