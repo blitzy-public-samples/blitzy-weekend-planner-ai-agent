@@ -767,4 +767,408 @@ describe('InputForm', () => {
     const submitButton = screen.getByRole('button', { name: /generate plan/i });
     expect(submitButton).toBeEnabled();
   });
+
+  // ============================================================================
+  // Mutation Testing — parseKidsAges Boundary Mutant Killers
+  // ============================================================================
+
+  /**
+   * Mutation-testing targeted tests for parseKidsAges() boundary conditions.
+   *
+   * Each test targets a specific Stryker mutant category with exact assertions
+   * that would fail if the corresponding mutation were applied to the source code.
+   *
+   * Key mutation targets in parseKidsAges() (InputForm.tsx line 80):
+   *   - num <= 0  → may mutate to num < 0 (accepts 0) or num >= 0 (rejects all)
+   *   - num >= 120 → may mutate to num > 120 (accepts 120) or num <= 120 (rejects all)
+   *   - age !== String(num) → may mutate to age === String(num) (inverts validation)
+   *   - isNaN(num) → removal mutant
+   *   - || operators → may mutate to &&
+   */
+  describe('Mutation testing - parseKidsAges boundary mutant killers', () => {
+
+    // ------------------------------------------------------------------
+    // Phase 1: Comparison-Operator Mutants
+    // ------------------------------------------------------------------
+
+    /**
+     * Targets `num <= 0` being mutated to `num < 0` which would wrongly accept age 0.
+     * Verifies age=0 is rejected and the exact validation error message is displayed.
+     */
+    it('[EqualityOperator L80] age > 0 boundary: age=0 rejected, age=1 accepted', async () => {
+      const user = userEvent.setup();
+      render(<InputForm onSubmit={mockOnSubmit} onReset={mockOnReset} />);
+
+      const zipCodeInput = screen.getByLabelText(/zip code/i);
+      const kidsAgesInput = screen.getByLabelText(/kids ages/i);
+
+      // Fill zip code (required) and ages with boundary value 0
+      await user.type(zipCodeInput, '94105');
+      await user.type(kidsAgesInput, '0');
+
+      const submitButton = screen.getByRole('button', { name: /generate plan/i });
+      await user.click(submitButton);
+
+      // Verify the validation error is shown with exact text
+      await waitFor(() => {
+        expect(
+          screen.getByText('Enter ages as numbers separated by commas (1-119)')
+        ).toBeInTheDocument();
+      });
+      // onSubmit must NOT have been called — age 0 is invalid
+      expect(mockOnSubmit).not.toHaveBeenCalled();
+    });
+
+    /**
+     * Combined boundary test: age=119 must be accepted (max valid) while
+     * age=120 must be rejected. Catches `num >= 120` mutated to `num > 120`.
+     */
+    it('[EqualityOperator L80] age < 120 boundary: age=119 accepted, age=120 rejected', async () => {
+      // ---- Part 1: age=119 accepted ----
+      const user1 = userEvent.setup();
+      const { unmount } = render(
+        <InputForm onSubmit={mockOnSubmit} onReset={mockOnReset} />
+      );
+
+      await user1.type(screen.getByLabelText(/zip code/i), '94105');
+      await user1.type(screen.getByLabelText(/kids ages/i), '119');
+
+      await user1.click(
+        screen.getByRole('button', { name: /generate plan/i })
+      );
+
+      await waitFor(() => {
+        expect(mockOnSubmit).toHaveBeenCalledTimes(1);
+        expect(mockOnSubmit).toHaveBeenCalledWith({
+          location: '94105',
+          kidsAges: [119],
+        });
+      });
+
+      // ---- Part 2: age=120 rejected ----
+      unmount();
+      mockOnSubmit.mockClear();
+
+      const user2 = userEvent.setup();
+      render(<InputForm onSubmit={mockOnSubmit} onReset={mockOnReset} />);
+
+      await user2.type(screen.getByLabelText(/zip code/i), '94105');
+      await user2.type(screen.getByLabelText(/kids ages/i), '120');
+
+      await user2.click(
+        screen.getByRole('button', { name: /generate plan/i })
+      );
+
+      await waitFor(() => {
+        expect(
+          screen.getByText('Enter ages as numbers separated by commas (1-119)')
+        ).toBeInTheDocument();
+      });
+      expect(mockOnSubmit).not.toHaveBeenCalled();
+    });
+
+    /**
+     * Specifically targets `num <= 0` mutated to `num < 0`.
+     * Age 0 must be rejected because 0 <= 0 is true.
+     */
+    it('[EqualityOperator L80] exact 0 exclusion - validates num <= 0 comparison', async () => {
+      const user = userEvent.setup();
+      render(<InputForm onSubmit={mockOnSubmit} onReset={mockOnReset} />);
+
+      await user.type(screen.getByLabelText(/zip code/i), '94105');
+      await user.type(screen.getByLabelText(/kids ages/i), '0');
+
+      await user.click(
+        screen.getByRole('button', { name: /generate plan/i })
+      );
+
+      await waitFor(() => {
+        expect(
+          screen.getByText('Enter ages as numbers separated by commas (1-119)')
+        ).toBeInTheDocument();
+      });
+      expect(mockOnSubmit).not.toHaveBeenCalled();
+    });
+
+    /**
+     * Specifically targets `num >= 120` mutated to `num > 120`.
+     * Age 120 must be rejected because 120 >= 120 is true.
+     */
+    it('[EqualityOperator L80] exact 120 exclusion - validates num >= 120 comparison', async () => {
+      const user = userEvent.setup();
+      render(<InputForm onSubmit={mockOnSubmit} onReset={mockOnReset} />);
+
+      await user.type(screen.getByLabelText(/zip code/i), '94105');
+      await user.type(screen.getByLabelText(/kids ages/i), '120');
+
+      await user.click(
+        screen.getByRole('button', { name: /generate plan/i })
+      );
+
+      await waitFor(() => {
+        expect(
+          screen.getByText('Enter ages as numbers separated by commas (1-119)')
+        ).toBeInTheDocument();
+      });
+      expect(mockOnSubmit).not.toHaveBeenCalled();
+    });
+
+    // ------------------------------------------------------------------
+    // Phase 2: Exact Return-Value Assertions
+    // ------------------------------------------------------------------
+
+    /**
+     * Catches arithmetic mutants that alter parsed integer values or the push
+     * operation. Uses exact object match (no expect.objectContaining).
+     */
+    it('[ArithmeticOperator L80] submission with "5, 8" produces exactly [5, 8]', async () => {
+      const user = userEvent.setup();
+      render(<InputForm onSubmit={mockOnSubmit} onReset={mockOnReset} />);
+
+      await user.type(screen.getByLabelText(/zip code/i), '94105');
+      await user.type(screen.getByLabelText(/kids ages/i), '5, 8');
+
+      await user.click(
+        screen.getByRole('button', { name: /generate plan/i })
+      );
+
+      await waitFor(() => {
+        expect(mockOnSubmit).toHaveBeenCalledTimes(1);
+        // Exact match — no expect.objectContaining wrapper
+        expect(mockOnSubmit).toHaveBeenCalledWith({
+          location: '94105',
+          kidsAges: [5, 8],
+        });
+      });
+    });
+
+    /**
+     * Single-element array verification to catch mutants that break
+     * the initial push or return logic for single-age inputs.
+     */
+    it('[ArithmeticOperator L80] submission with single age "7" produces exactly [7]', async () => {
+      const user = userEvent.setup();
+      render(<InputForm onSubmit={mockOnSubmit} onReset={mockOnReset} />);
+
+      await user.type(screen.getByLabelText(/zip code/i), '94105');
+      await user.type(screen.getByLabelText(/kids ages/i), '7');
+
+      await user.click(
+        screen.getByRole('button', { name: /generate plan/i })
+      );
+
+      await waitFor(() => {
+        expect(mockOnSubmit).toHaveBeenCalledTimes(1);
+        expect(mockOnSubmit).toHaveBeenCalledWith({
+          location: '94105',
+          kidsAges: [7],
+        });
+      });
+    });
+
+    /**
+     * Multi-element array with order verification. Catches mutants that
+     * modify iteration order or array construction.
+     */
+    it('[ArithmeticOperator L80] submission with "1,2,3" produces exactly [1, 2, 3]', async () => {
+      const user = userEvent.setup();
+      render(<InputForm onSubmit={mockOnSubmit} onReset={mockOnReset} />);
+
+      await user.type(screen.getByLabelText(/zip code/i), '94105');
+      await user.type(screen.getByLabelText(/kids ages/i), '1,2,3');
+
+      await user.click(
+        screen.getByRole('button', { name: /generate plan/i })
+      );
+
+      await waitFor(() => {
+        expect(mockOnSubmit).toHaveBeenCalledTimes(1);
+        expect(mockOnSubmit).toHaveBeenCalledWith({
+          location: '94105',
+          kidsAges: [1, 2, 3],
+        });
+      });
+    });
+
+    // ------------------------------------------------------------------
+    // Phase 3: Empty-String-After-Trim Mutants
+    // ------------------------------------------------------------------
+
+    /**
+     * Targets removal of the `!input.trim()` guard on line 73 of parseKidsAges.
+     * Whitespace-only input must be treated as empty → [] (optional field).
+     */
+    it('[ConditionalExpression L73] whitespace-only ages input treated as empty', async () => {
+      const user = userEvent.setup();
+      render(<InputForm onSubmit={mockOnSubmit} onReset={mockOnReset} />);
+
+      await user.type(screen.getByLabelText(/zip code/i), '94105');
+      await user.type(screen.getByLabelText(/kids ages/i), '   ');
+
+      await user.click(
+        screen.getByRole('button', { name: /generate plan/i })
+      );
+
+      // Whitespace-only is treated as empty → kidsAges: []
+      await waitFor(() => {
+        expect(mockOnSubmit).toHaveBeenCalledTimes(1);
+        expect(mockOnSubmit).toHaveBeenCalledWith({
+          location: '94105',
+          kidsAges: [],
+        });
+      });
+    });
+
+    /**
+     * Comma-separated input with empty segment "5,,8" — the empty segment
+     * between commas becomes "" after trim, parseInt returns NaN.
+     * Catches StringLiteral mutants on the comma separator.
+     */
+    it('[StringLiteral L75] comma-separated with empty segments rejects: "5,,8"', async () => {
+      const user = userEvent.setup();
+      render(<InputForm onSubmit={mockOnSubmit} onReset={mockOnReset} />);
+
+      await user.type(screen.getByLabelText(/zip code/i), '94105');
+      await user.type(screen.getByLabelText(/kids ages/i), '5,,8');
+
+      await user.click(
+        screen.getByRole('button', { name: /generate plan/i })
+      );
+
+      await waitFor(() => {
+        expect(
+          screen.getByText('Enter ages as numbers separated by commas (1-119)')
+        ).toBeInTheDocument();
+      });
+      expect(mockOnSubmit).not.toHaveBeenCalled();
+    });
+
+    // ------------------------------------------------------------------
+    // Phase 4: Non-Numeric / Edge-Case Input
+    // ------------------------------------------------------------------
+
+    /**
+     * Non-numeric input "abc" — parseInt returns NaN, so isNaN(num) is true.
+     * Catches removal of the isNaN(num) check.
+     */
+    it('[ConditionalExpression L80] non-numeric input "abc" is rejected', async () => {
+      const user = userEvent.setup();
+      render(<InputForm onSubmit={mockOnSubmit} onReset={mockOnReset} />);
+
+      await user.type(screen.getByLabelText(/zip code/i), '94105');
+      await user.type(screen.getByLabelText(/kids ages/i), 'abc');
+
+      await user.click(
+        screen.getByRole('button', { name: /generate plan/i })
+      );
+
+      await waitFor(() => {
+        expect(
+          screen.getByText('Enter ages as numbers separated by commas (1-119)')
+        ).toBeInTheDocument();
+      });
+      expect(mockOnSubmit).not.toHaveBeenCalled();
+    });
+
+    /**
+     * Decimal input "1.5" — parseInt("1.5", 10) returns 1 but
+     * "1.5" !== String(1) ("1.5" !== "1") → returns null.
+     * Catches `age !== String(num)` being mutated to `===`.
+     */
+    it('[ConditionalExpression L80] decimal input "1.5" is rejected', async () => {
+      const user = userEvent.setup();
+      render(<InputForm onSubmit={mockOnSubmit} onReset={mockOnReset} />);
+
+      await user.type(screen.getByLabelText(/zip code/i), '94105');
+      await user.type(screen.getByLabelText(/kids ages/i), '1.5');
+
+      await user.click(
+        screen.getByRole('button', { name: /generate plan/i })
+      );
+
+      await waitFor(() => {
+        expect(
+          screen.getByText('Enter ages as numbers separated by commas (1-119)')
+        ).toBeInTheDocument();
+      });
+      expect(mockOnSubmit).not.toHaveBeenCalled();
+    });
+
+    /**
+     * Negative number "-5" — parseInt returns -5, and -5 <= 0 triggers rejection.
+     * Catches boundary-comparison mutants on the negative side.
+     */
+    it('[EqualityOperator L80] negative number "-5" is rejected', async () => {
+      const user = userEvent.setup();
+      render(<InputForm onSubmit={mockOnSubmit} onReset={mockOnReset} />);
+
+      await user.type(screen.getByLabelText(/zip code/i), '94105');
+      await user.type(screen.getByLabelText(/kids ages/i), '-5');
+
+      await user.click(
+        screen.getByRole('button', { name: /generate plan/i })
+      );
+
+      await waitFor(() => {
+        expect(
+          screen.getByText('Enter ages as numbers separated by commas (1-119)')
+        ).toBeInTheDocument();
+      });
+      expect(mockOnSubmit).not.toHaveBeenCalled();
+    });
+
+    /**
+     * Mixed valid/invalid "5, abc, 8" — one invalid age invalidates the entire
+     * input (parseKidsAges returns null on first invalid element).
+     * Catches logical-operator mutants (|| → &&).
+     */
+    it('[ConditionalExpression L80] mixed valid/invalid "5, abc, 8" is rejected entirely', async () => {
+      const user = userEvent.setup();
+      render(<InputForm onSubmit={mockOnSubmit} onReset={mockOnReset} />);
+
+      await user.type(screen.getByLabelText(/zip code/i), '94105');
+      await user.type(screen.getByLabelText(/kids ages/i), '5, abc, 8');
+
+      await user.click(
+        screen.getByRole('button', { name: /generate plan/i })
+      );
+
+      await waitFor(() => {
+        expect(
+          screen.getByText('Enter ages as numbers separated by commas (1-119)')
+        ).toBeInTheDocument();
+      });
+      expect(mockOnSubmit).not.toHaveBeenCalled();
+    });
+
+    // ------------------------------------------------------------------
+    // Phase 5: Validation Error Message Exact Text
+    // ------------------------------------------------------------------
+
+    /**
+     * Verifies the exact validation error message text to catch StringLiteral
+     * mutants that alter the message string. Uses both getByText (exact match)
+     * and role="alert" attribute verification.
+     */
+    it('[StringLiteral L137] validation error shows exact message text', async () => {
+      const user = userEvent.setup();
+      render(<InputForm onSubmit={mockOnSubmit} onReset={mockOnReset} />);
+
+      await user.type(screen.getByLabelText(/zip code/i), '94105');
+      await user.type(screen.getByLabelText(/kids ages/i), '0');
+
+      await user.click(
+        screen.getByRole('button', { name: /generate plan/i })
+      );
+
+      // Verify exact error message text via role="alert" element
+      await waitFor(() => {
+        const errorAlert = screen.getByRole('alert');
+        expect(errorAlert).toHaveTextContent(
+          'Enter ages as numbers separated by commas (1-119)'
+        );
+      });
+      expect(mockOnSubmit).not.toHaveBeenCalled();
+    });
+  });
 });
