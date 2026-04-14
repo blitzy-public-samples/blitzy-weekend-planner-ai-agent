@@ -199,4 +199,225 @@ describe('RawOutput', () => {
     // Content should be hidden again
     expect(screen.queryByText(/Sample response/)).not.toBeInTheDocument();
   });
+
+  // =========================================================================
+  // Stryker Mutation-Testing Targeted Tests
+  // Each test targets a specific Stryker mutant category to kill surviving
+  // mutants identified from the mutation testing baseline run.
+  // =========================================================================
+
+  /**
+   * BooleanLiteral Mutant Killer — Test 5
+   *
+   * Targets the BooleanLiteral mutant on line 65 where
+   * `useState<boolean>(false)` could be mutated to `useState<boolean>(true)`.
+   * Explicitly verifies BOTH the aria-expanded attribute value AND
+   * the absence of the content region in the initial render.
+   */
+  it('[BooleanLiteral L65] isOpen state initialization starts collapsed', () => {
+    render(<RawOutput data={mockData} />);
+
+    // The toggle button must have aria-expanded="false" initially
+    const btn = screen.getByRole('button', { name: /raw output/i });
+    expect(btn).toHaveAttribute('aria-expanded', 'false');
+
+    // The content region must NOT exist in the DOM when collapsed
+    // A BooleanLiteral mutant flipping false→true would cause this to exist
+    expect(screen.queryByRole('region')).not.toBeInTheDocument();
+  });
+
+  /**
+   * BooleanLiteral Mutant Killer — Test 6
+   *
+   * Second BooleanLiteral mutant killer for line 65.
+   * Verifies that the named region AND the <pre> element are both
+   * absent on initial render. If useState(false) is mutated to
+   * useState(true), the <pre> element would be present immediately.
+   */
+  it('[BooleanLiteral L65] content is not rendered when component initializes', () => {
+    const { container } = render(<RawOutput data={mockData} />);
+
+    // Named content region must not exist initially
+    expect(
+      screen.queryByRole('region', { name: /raw output content/i })
+    ).not.toBeInTheDocument();
+
+    // The <pre> element containing JSON must not be in the DOM
+    expect(container.querySelector('pre')).toBeNull();
+  });
+
+  /**
+   * StringLiteral Mutant Killer — Test 7
+   *
+   * Targets StringLiteral mutants on the aria-expanded attribute (line 90).
+   * Uses exact string matching for "false" and "true" values to catch
+   * mutations that alter the attribute string literals.
+   */
+  it('[StringLiteral L90] aria-expanded is exactly "false" then exactly "true" after toggle', () => {
+    render(<RawOutput data={mockData} />);
+
+    const btn = screen.getByRole('button', { name: /raw output/i });
+
+    // Exact string match "false" — catches StringLiteral mutant on attribute
+    expect(btn).toHaveAttribute('aria-expanded', 'false');
+
+    fireEvent.click(btn);
+
+    // Exact string match "true" — catches StringLiteral mutant on attribute
+    expect(btn).toHaveAttribute('aria-expanded', 'true');
+  });
+
+  /**
+   * StringLiteral Mutant Killer — Test 8
+   *
+   * Targets StringLiteral mutant on contentId = 'raw-output-content' (line 71).
+   * Verifies aria-controls on the button matches the id of the content region
+   * when expanded, ensuring the two are linked by the same string constant.
+   */
+  it('[StringLiteral L91] aria-controls links to content id', () => {
+    render(<RawOutput data={mockData} />);
+
+    const btn = screen.getByRole('button', { name: /raw output/i });
+
+    // Expand the section to make the content region appear
+    fireEvent.click(btn);
+
+    // The button's aria-controls must point to exact content id string
+    expect(btn).toHaveAttribute('aria-controls', 'raw-output-content');
+
+    // The content region must have the matching id attribute
+    const region = screen.getByRole('region');
+    expect(region).toHaveAttribute('id', 'raw-output-content');
+  });
+
+  /**
+   * ConditionalExpression Mutant Killer — Test 9
+   *
+   * Targets the ConditionalExpression mutant on line 116 where
+   * `{isExpanded && (...)}` could be mutated to `{true && (...)}`
+   * or `{false && (...)}`. Verifies the <pre> element is absent
+   * before toggling and present after toggling with correct JSON content.
+   */
+  it('[ConditionalExpression L116] JSON content hidden before toggle, visible after', () => {
+    const { container } = render(<RawOutput data={mockData} />);
+
+    // Before toggle: <pre> must not exist in the DOM
+    expect(container.querySelector('pre')).toBeNull();
+
+    // Click to expand
+    fireEvent.click(screen.getByRole('button', { name: /raw output/i }));
+
+    // After toggle: <pre> must exist with JSON content
+    const pre = container.querySelector('pre');
+    expect(pre).not.toBeNull();
+    expect(pre?.textContent).toContain('Sample response');
+    expect(pre?.textContent).toContain('SummarizerAgent');
+  });
+
+  /**
+   * ConditionalExpression Mutant Killer — Test 10
+   *
+   * Second ConditionalExpression killer for line 116.
+   * Verifies the role="region" element is conditionally rendered
+   * and carries the correct aria-label linking it to the title.
+   */
+  it('[ConditionalExpression L116] region element only exists when expanded', () => {
+    render(<RawOutput data={mockData} />);
+
+    // Before toggle: region must not exist
+    expect(screen.queryByRole('region')).not.toBeInTheDocument();
+
+    // Click to expand
+    fireEvent.click(screen.getByRole('button', { name: /raw output/i }));
+
+    // After toggle: region must exist with correct aria-label
+    const region = screen.getByRole('region');
+    expect(region).toBeInTheDocument();
+    expect(region).toHaveAttribute('aria-label', 'Raw Output content');
+  });
+
+  /**
+   * StringLiteral Mutant Killer — Test 11
+   *
+   * Targets StringLiteral mutants in JSON.stringify formatting (line 124).
+   * Uses deeply nested data to ensure the entire object graph is correctly
+   * serialized and rendered in the <pre> element.
+   */
+  it('[StringLiteral] renders deeply nested object data correctly', () => {
+    // Create data with deep nesting to exercise JSON.stringify fully
+    const nestedData = [
+      {
+        id: '1',
+        timestamp: 'now',
+        author: 'test',
+        content: {
+          role: 'model',
+          parts: [{ text: 'deep' }]
+        },
+        nested: { level1: { level2: { value: 'deep_value' } } }
+      }
+    ] as unknown as ADKResponse;
+
+    const { container } = render(<RawOutput data={nestedData} />);
+
+    // Expand the section
+    fireEvent.click(screen.getByRole('button', { name: /raw output/i }));
+
+    const pre = container.querySelector('pre');
+    expect(pre).not.toBeNull();
+    // Verify deeply nested value is present in the formatted JSON output
+    expect(pre?.textContent).toContain('deep_value');
+    expect(pre?.textContent).toContain('level2');
+  });
+
+  /**
+   * StringLiteral Mutant Killer — Test 12
+   *
+   * Targets StringLiteral mutants around JSON.stringify edge cases.
+   * Verifies that empty arrays and minimal data structures are rendered
+   * correctly in the <pre> block.
+   */
+  it('[StringLiteral] renders array and null values in JSON data', () => {
+    const edgeCaseData: ADKResponse = [
+      {
+        id: '1',
+        timestamp: 'now',
+        author: 'test',
+        content: {
+          role: 'model',
+          parts: []
+        }
+      }
+    ];
+
+    const { container } = render(<RawOutput data={edgeCaseData} />);
+
+    // Expand the section
+    fireEvent.click(screen.getByRole('button', { name: /raw output/i }));
+
+    const pre = container.querySelector('pre');
+    expect(pre).not.toBeNull();
+    // Verify the empty parts array is correctly rendered in the JSON
+    expect(pre?.textContent).toContain('"parts": []');
+  });
+
+  /**
+   * StringLiteral Mutant Killer — Test 13
+   *
+   * Targets StringLiteral mutants on the JSON.stringify parameters (null, 2)
+   * on line 124. Uses exact `toBe` matching against the expected
+   * JSON.stringify output to catch any mutation of the formatting arguments.
+   */
+  it('[StringLiteral] pre element contains full JSON.stringify output', () => {
+    const { container } = render(<RawOutput data={mockData} />);
+
+    // Expand the section
+    fireEvent.click(screen.getByRole('button', { name: /raw output/i }));
+
+    const pre = container.querySelector('pre');
+    expect(pre).not.toBeNull();
+    // Exact match ensures JSON.stringify(data, null, 2) parameters are correct
+    // Mutating null or 2 would change the formatting and fail this assertion
+    expect(pre?.textContent).toBe(JSON.stringify(mockData, null, 2));
+  });
 });
