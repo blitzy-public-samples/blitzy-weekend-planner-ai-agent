@@ -726,5 +726,34 @@ describe('ErrorDisplay', () => {
         )
       ).toBeInTheDocument();
     });
+
+    // ------------------------------------------------------------------
+    // Phase 6: NoCoverage Mutant Killers (Stryker D7 verification)
+    // ------------------------------------------------------------------
+
+    it('[StringLiteral L76] 4xx status code with empty message uses fallback text', () => {
+      // Targets L76: the fallback 'Please check your input and try again.'
+      // in the statusCode >= 400 && < 500 branch when error.message is falsy.
+      // Renders without type so switch falls through to statusCode check.
+      render(<ErrorDisplay error={{ message: '', statusCode: 400 }} />);
+      expect(
+        screen.getByText(
+          (content) =>
+            content === 'Invalid request: Please check your input and try again.'
+        )
+      ).toBeInTheDocument();
+    });
+
+    it('[StringLiteral L76] 4xx status without type and without message renders fallback', () => {
+      // Verifies the exact fallback string for status 499 (upper boundary of 4xx)
+      // without type field to ensure the statusCode path is tested
+      render(<ErrorDisplay error={{ message: '', statusCode: 499 }} />);
+      expect(
+        screen.getByText(
+          (content) =>
+            content === 'Invalid request: Please check your input and try again.'
+        )
+      ).toBeInTheDocument();
+    });
   });
 });

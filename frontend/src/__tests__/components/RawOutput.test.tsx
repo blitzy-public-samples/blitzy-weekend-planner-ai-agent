@@ -343,7 +343,7 @@ describe('RawOutput', () => {
    * Uses deeply nested data to ensure the entire object graph is correctly
    * serialized and rendered in the <pre> element.
    */
-  it('[StringLiteral] renders deeply nested object data correctly', () => {
+  it('[StringLiteral L124] renders deeply nested object data correctly', () => {
     // Create data with deep nesting to exercise JSON.stringify fully
     const nestedData = [
       {
@@ -377,7 +377,7 @@ describe('RawOutput', () => {
    * Verifies that empty arrays and minimal data structures are rendered
    * correctly in the <pre> block.
    */
-  it('[StringLiteral] renders array and null values in JSON data', () => {
+  it('[StringLiteral L124] renders array and null values in JSON data', () => {
     const edgeCaseData: ADKResponse = [
       {
         id: '1',
@@ -408,7 +408,7 @@ describe('RawOutput', () => {
    * on line 124. Uses exact `toBe` matching against the expected
    * JSON.stringify output to catch any mutation of the formatting arguments.
    */
-  it('[StringLiteral] pre element contains full JSON.stringify output', () => {
+  it('[StringLiteral L124] pre element contains full JSON.stringify output', () => {
     const { container } = render(<RawOutput data={mockData} />);
 
     // Expand the section

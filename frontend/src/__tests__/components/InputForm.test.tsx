@@ -1170,5 +1170,147 @@ describe('InputForm', () => {
       });
       expect(mockOnSubmit).not.toHaveBeenCalled();
     });
+
+    // ------------------------------------------------------------------
+    // Phase 6: NoCoverage Mutant Killers (Stryker D7 verification)
+    // ------------------------------------------------------------------
+
+    /**
+     * Tests targeting NoCoverage mutants in InputForm.tsx identified during
+     * the Stryker baseline run (Directive 4). These code paths are in
+     * validation and error-clearing logic that require form-level interaction
+     * patterns to exercise.
+     */
+
+    it('[BlockStatement L129] validateForm rejects empty location on forced submit', async () => {
+      // Force form submission with empty location by dispatching submit
+      // event directly on the form element (bypasses disabled button).
+      // Covers L129-130 in validateForm which is normally unreachable
+      // because isFormValid() disables the submit button when location is empty.
+      render(<InputForm onSubmit={mockOnSubmit} onReset={mockOnReset} />);
+
+      const form = document.querySelector('form')!;
+      fireEvent.submit(form);
+
+      // L130: newErrors.location = 'Zip Code is required'
+      await waitFor(() => {
+        expect(
+          screen.getByText('Zip Code is required')
+        ).toBeInTheDocument();
+      });
+
+      // The error alert should be visible
+      const errorAlert = screen.getByRole('alert');
+      expect(errorAlert).toHaveTextContent('Zip Code is required');
+
+      // onSubmit should NOT have been called
+      expect(mockOnSubmit).not.toHaveBeenCalled();
+    });
+
+    it('[StringLiteral L130] location validation error message is exact string', async () => {
+      // Specifically targets the StringLiteral mutant on L130 that would
+      // replace 'Zip Code is required' with empty string
+      render(<InputForm onSubmit={mockOnSubmit} onReset={mockOnReset} />);
+
+      const form = document.querySelector('form')!;
+      fireEvent.submit(form);
+
+      await waitFor(() => {
+        const errorElement = screen.getByText('Zip Code is required');
+        expect(errorElement).toBeInTheDocument();
+        // Verify the exact ID used for aria-describedby association
+        expect(errorElement).toHaveAttribute('id', 'location-error');
+      });
+    });
+
+    it('[StringLiteral L245] location input gets error border class on validation failure', async () => {
+      // Targets L245: errors.location ? 'border-[#E63946]' : 'border-gray-300'
+      render(<InputForm onSubmit={mockOnSubmit} onReset={mockOnReset} />);
+
+      const locationInput = screen.getByLabelText(/zip code/i);
+
+      // Before error: should have normal border
+      expect(locationInput.className).toContain('border-gray-300');
+      expect(locationInput.className).not.toContain('border-[#E63946]');
+
+      // Force submit to trigger validation error
+      const form = document.querySelector('form')!;
+      fireEvent.submit(form);
+
+      // After error: should have error border
+      await waitFor(() => {
+        expect(locationInput.className).toContain('border-[#E63946]');
+      });
+      expect(locationInput.className).not.toContain('border-gray-300');
+    });
+
+    it('[StringLiteral L248] location input sets aria-invalid true on validation failure', async () => {
+      // Targets L248: aria-invalid={errors.location ? 'true' : 'false'}
+      render(<InputForm onSubmit={mockOnSubmit} onReset={mockOnReset} />);
+
+      const locationInput = screen.getByLabelText(/zip code/i);
+
+      // Before error: aria-invalid should be 'false'
+      expect(locationInput).toHaveAttribute('aria-invalid', 'false');
+
+      // Force submit to trigger validation error
+      const form = document.querySelector('form')!;
+      fireEvent.submit(form);
+
+      // After error: aria-invalid should be 'true'
+      await waitFor(() => {
+        expect(locationInput).toHaveAttribute('aria-invalid', 'true');
+      });
+    });
+
+    it('[StringLiteral L249] location input sets aria-describedby on validation failure', async () => {
+      // Targets L249: aria-describedby={errors.location ? 'location-error' : undefined}
+      render(<InputForm onSubmit={mockOnSubmit} onReset={mockOnReset} />);
+
+      const locationInput = screen.getByLabelText(/zip code/i);
+
+      // Before error: aria-describedby should not be set
+      expect(locationInput).not.toHaveAttribute('aria-describedby');
+
+      // Force submit to trigger validation error
+      const form = document.querySelector('form')!;
+      fireEvent.submit(form);
+
+      // After error: aria-describedby should point to error element
+      await waitFor(() => {
+        expect(locationInput).toHaveAttribute('aria-describedby', 'location-error');
+      });
+    });
+
+    it('[BlockStatement L208] typing in field clears its validation error', async () => {
+      // Targets L208-210: createChangeHandler error-clearing logic
+      // When errors[field] exists and user types, the error is cleared
+      const user = userEvent.setup();
+      render(<InputForm onSubmit={mockOnSubmit} onReset={mockOnReset} />);
+
+      // Step 1: Force submit with empty location to create error state
+      const form = document.querySelector('form')!;
+      fireEvent.submit(form);
+
+      // Verify error exists
+      await waitFor(() => {
+        expect(screen.getByText('Zip Code is required')).toBeInTheDocument();
+      });
+
+      // Step 2: Type in location field to trigger createChangeHandler
+      // This exercises L208: if (field && errors[field])
+      // L209: setErrors(prev => { ... })
+      // L210: const newErrors = { ...prev }
+      const locationInput = screen.getByLabelText(/zip code/i);
+      await user.type(locationInput, '9');
+
+      // Error should be cleared after typing
+      await waitFor(() => {
+        expect(screen.queryByText('Zip Code is required')).not.toBeInTheDocument();
+      });
+
+      // aria-invalid should revert to false
+      expect(locationInput).toHaveAttribute('aria-invalid', 'false');
+    });
   });
 });

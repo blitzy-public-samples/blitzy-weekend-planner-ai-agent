@@ -107,7 +107,7 @@ describe('LoadingState', () => {
    * skeleton cards rendered (e.g., removing or duplicating a card JSX block).
    * The component must render exactly 4 bg-white.rounded-xl card containers.
    */
-  it('[ArithmeticOperator] renders exactly 4 skeleton cards', () => {
+  it('[ArithmeticOperator L53] renders exactly 4 skeleton cards', () => {
     const { container } = render(<LoadingState />);
 
     // Query all skeleton card containers by their distinctive class combination
@@ -123,7 +123,7 @@ describe('LoadingState', () => {
    * Cards 1-3 each have 4 bars (1 header + 3 content), Card 4 has 3 bars
    * (1 header + 2 content). Total: 4 + 4 + 4 + 3 = 15.
    */
-  it('[ArithmeticOperator] renders exactly 15 animate-pulse skeleton elements', () => {
+  it('[ArithmeticOperator L55] renders exactly 15 animate-pulse skeleton elements', () => {
     const { container } = render(<LoadingState />);
 
     const skeletonElements = container.querySelectorAll('.animate-pulse');
@@ -138,7 +138,7 @@ describe('LoadingState', () => {
    * Catches StringLiteral mutants that would change the animate-pulse class
    * string on skeleton placeholder elements identified via bg-gray-200.
    */
-  it('[StringLiteral] skeleton elements have animate-pulse class', () => {
+  it('[StringLiteral L55] skeleton elements have animate-pulse class', () => {
     const { container } = render(<LoadingState />);
 
     const grayElements = container.querySelectorAll('.bg-gray-200');
@@ -154,7 +154,7 @@ describe('LoadingState', () => {
    * Catches StringLiteral mutants that would change the bg-gray-200 background
    * color class on skeleton placeholder elements identified via animate-pulse.
    */
-  it('[StringLiteral] skeleton elements have bg-gray-200 class for skeleton appearance', () => {
+  it('[StringLiteral L55] skeleton elements have bg-gray-200 class for skeleton appearance', () => {
     const { container } = render(<LoadingState />);
 
     const pulseElements = container.querySelectorAll('.animate-pulse');
@@ -172,7 +172,7 @@ describe('LoadingState', () => {
    * Catches BooleanLiteral mutants that flip aria-busy from "true" to "false".
    * Explicitly asserts the exact value and negates the opposite.
    */
-  it('[BooleanLiteral] aria-busy is exactly "true" not "false"', () => {
+  it('[BooleanLiteral L41] aria-busy is exactly "true" not "false"', () => {
     render(<LoadingState />);
 
     const statusEl = screen.getByRole('status');
@@ -187,7 +187,7 @@ describe('LoadingState', () => {
    * Catches StringLiteral mutants that would change the role attribute value.
    * Explicit existence check via getByRole ensures the exact role string is "status".
    */
-  it('[StringLiteral] role attribute is exactly "status"', () => {
+  it('[StringLiteral L42] role attribute is exactly "status"', () => {
     render(<LoadingState />);
 
     const statusEl = screen.getByRole('status');
@@ -202,7 +202,7 @@ describe('LoadingState', () => {
    * Catches StringLiteral mutants that would alter the aria-label text.
    * Uses exact string match (not regex) for maximum mutation-killing precision.
    */
-  it('[StringLiteral] aria-label is exactly "Loading weekend plan"', () => {
+  it('[StringLiteral L43] aria-label is exactly "Loading weekend plan"', () => {
     render(<LoadingState />);
 
     const statusEl = screen.getByRole('status');
@@ -226,7 +226,7 @@ describe('LoadingState', () => {
    *   Card 3: 1 header (h-6) + 3 content lines (h-4) = 4 animate-pulse
    *   Card 4: 1 header (h-6) + 2 content lines (h-4) = 3 animate-pulse
    */
-  it('[ArithmeticOperator] each skeleton card contains expected number of skeleton bars', () => {
+  it('[ArithmeticOperator L55] each skeleton card contains expected number of skeleton bars', () => {
     const { container } = render(<LoadingState />);
 
     const cards = container.querySelectorAll('.bg-white.rounded-xl');

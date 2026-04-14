@@ -773,5 +773,42 @@ Disclaimer: Results are based on AI research and should be verified for accuracy
       expect(items[2]).toHaveAttribute('aria-label', expect.stringContaining('Activity 3'));
       expect(items[3]).toHaveAttribute('aria-label', expect.stringContaining('Activity 4'));
     });
+
+    // ------------------------------------------------------------------
+    // NoCoverage Mutant Killers (Stryker D7 verification)
+    // ------------------------------------------------------------------
+
+    it('[StringLiteral L151] multi-line continuation text concatenates with space separator', () => {
+      // Targets L151: description concatenation template literal
+      // `${currentActivity.description} ${line}` — Stryker mutates this to ""
+      // When a bullet activity has multiple continuation lines, they are
+      // joined with a space separator. This test verifies the join behavior.
+      const multiLineResult: GeneratePlanResult = {
+        success: true,
+        planText:
+          '- Visit the science museum\n' +
+          'Great exhibits for all ages\n' +
+          'Interactive displays throughout\n' +
+          '- Explore the botanical garden\n' +
+          'Beautiful seasonal flowers\n' +
+          'Peaceful walking paths available',
+        rawResponse: undefined,
+      };
+
+      render(<PlanView result={multiLineResult} />);
+
+      // Activities should be structured (>= 2 activities)
+      const items = screen.getAllByRole('listitem');
+      expect(items).toHaveLength(2);
+
+      // L151: The concatenation joins continuation lines with a space.
+      // "Great exhibits for all ages" + " " + "Interactive displays throughout"
+      // If the StringLiteral mutant replaces the template with "", the
+      // description text would be empty instead of containing both lines.
+      expect(screen.getByText(/Great exhibits for all ages/)).toBeInTheDocument();
+      expect(screen.getByText(/Interactive displays throughout/)).toBeInTheDocument();
+      expect(screen.getByText(/Beautiful seasonal flowers/)).toBeInTheDocument();
+      expect(screen.getByText(/Peaceful walking paths available/)).toBeInTheDocument();
+    });
   });
 });

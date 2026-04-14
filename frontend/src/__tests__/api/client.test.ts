@@ -1008,5 +1008,136 @@ describe('API Client', () => {
         globalThis.fetch = originalFetch;
       }
     });
+
+    // ------------------------------------------------------------------
+    // NoCoverage Mutant Killers (Stryker D7 verification)
+    // ------------------------------------------------------------------
+
+    it('[ObjectLiteral L348] non-Error throw falls through to final catch', async () => {
+      // Targets L348-351: the final catch block that handles non-Error throws.
+      // When fetch rejects with a non-Error value (string), all instanceof Error
+      // checks fail, and the code falls to L351: 'An unknown error occurred'.
+      const originalFetch = globalThis.fetch;
+      globalThis.fetch = vi.fn().mockRejectedValue(
+        'string error not an Error instance'
+      ) as typeof fetch;
+
+      try {
+        const result = await generatePlan(validInput);
+        expect(result.success).toBe(false);
+        expect(result.error).toBeDefined();
+        // L351: error instanceof Error is false → uses 'An unknown error occurred'
+        expect(result.error!.message).toBe('An unknown error occurred');
+        // L349: success should be false
+        expect(result.success).toBe(false);
+      } finally {
+        globalThis.fetch = originalFetch;
+      }
+    });
+
+    it('[BooleanLiteral L349] non-Error throw returns success false', async () => {
+      // Targets L349: BooleanLiteral mutant that changes false to true.
+      // Verifies that success is explicitly false in the final catch block.
+      const originalFetch = globalThis.fetch;
+      globalThis.fetch = vi.fn().mockRejectedValue(42) as typeof fetch;
+
+      try {
+        const result = await generatePlan(validInput);
+        // L349: success: false — mutant would change to true
+        expect(result.success).toBe(false);
+        // L351: non-Error produces fallback message
+        expect(result.error!.message).toBe('An unknown error occurred');
+      } finally {
+        globalThis.fetch = originalFetch;
+      }
+    });
+
+    it('[StringLiteral L351] non-Error throw produces exact fallback message', async () => {
+      // Targets L351: StringLiteral mutant that changes 'An unknown error occurred'
+      // to "". Ensures the exact fallback message text is returned.
+      const originalFetch = globalThis.fetch;
+      globalThis.fetch = vi.fn().mockRejectedValue(null) as typeof fetch;
+
+      try {
+        const result = await generatePlan(validInput);
+        expect(result.success).toBe(false);
+        // L351: exact string verification kills the StringLiteral mutant
+        expect(result.error!.message).toBe('An unknown error occurred');
+        expect(result.error!.message).not.toBe('');
+        expect(result.error!.message.length).toBeGreaterThan(0);
+      } finally {
+        globalThis.fetch = originalFetch;
+      }
+    });
+
+    it('[BlockStatement L297] SSE text parsing exception returns format error', async () => {
+      // Targets L297-301: catch block around messageResponse.text() + parseSSEResponse.
+      // If messageResponse.text() throws, the catch at L297 returns a format error.
+      // Mock session success, then override fetch for second call to return
+      // a response whose .text() method rejects.
+      const originalFetch = globalThis.fetch;
+      let callCount = 0;
+
+      globalThis.fetch = vi.fn().mockImplementation(async (_url: string) => {
+        callCount++;
+        if (callCount === 1) {
+          // First call: session creation succeeds
+          return new Response(JSON.stringify({ status: 'created' }), {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' },
+          });
+        }
+        // Second call: run_sse returns a response whose text() throws
+        return {
+          ok: true,
+          status: 200,
+          headers: new Headers({ 'Content-Type': 'text/event-stream' }),
+          text: () => Promise.reject(new Error('Response body read failed')),
+        } as unknown as Response;
+      }) as typeof fetch;
+
+      try {
+        const result = await generatePlan(validInput);
+        expect(result.success).toBe(false);
+        expect(result.error).toBeDefined();
+        // L300: returns 'Received an unexpected response format'
+        expect(result.error!.message).toBe('Received an unexpected response format');
+        // L301: statusCode from response
+        expect(result.error!.statusCode).toBe(200);
+      } finally {
+        globalThis.fetch = originalFetch;
+      }
+    });
+
+    it('[BooleanLiteral L299] SSE parsing catch returns success false', async () => {
+      // Targets L299: BooleanLiteral mutant on success: false in catch block.
+      const originalFetch = globalThis.fetch;
+      let callCount = 0;
+
+      globalThis.fetch = vi.fn().mockImplementation(async () => {
+        callCount++;
+        if (callCount === 1) {
+          return new Response(JSON.stringify({ status: 'created' }), {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' },
+          });
+        }
+        return {
+          ok: true,
+          status: 200,
+          headers: new Headers(),
+          text: () => Promise.reject(new Error('Stream corrupted')),
+        } as unknown as Response;
+      }) as typeof fetch;
+
+      try {
+        const result = await generatePlan(validInput);
+        // L299: success should be explicitly false — mutant changes to true
+        expect(result.success).toBe(false);
+        expect(result.error!.message).toBe('Received an unexpected response format');
+      } finally {
+        globalThis.fetch = originalFetch;
+      }
+    });
   });
 });

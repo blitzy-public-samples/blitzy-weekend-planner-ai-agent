@@ -7,6 +7,9 @@ dist/
 # Coverage reports
 coverage/
 
+# Mutation testing reports
+reports/mutation/
+
 # Environment files (keep .env.example, ignore actual .env)
 .env
 .env.local

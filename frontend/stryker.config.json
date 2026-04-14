@@ -16,5 +16,8 @@
   },
   "jsonReporter": {
     "fileName": "reports/mutation/mutation.json"
+  },
+  "vitest": {
+    "configFile": "vitest.stryker.config.ts"
   }
 }

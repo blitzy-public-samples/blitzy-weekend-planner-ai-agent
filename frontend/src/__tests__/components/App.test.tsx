@@ -570,4 +570,36 @@ describe('App', () => {
       screen.getByText(/powered by google adk and gemini ai/i),
     ).toBeInTheDocument();
   });
+
+  // -------------------------------------------------------------------------
+  // Phase 11 — NoCoverage Mutant Killers (Stryker D7 verification)
+  // -------------------------------------------------------------------------
+
+  it('[StringLiteral L104] error without message triggers fallback text', async () => {
+    // Targets L104: planError?.message || 'An unknown error occurred'
+    // When generatePlan returns an error without a message (empty string),
+    // the || fallback triggers and 'An unknown error occurred' is used.
+    // Mock fetch to throw an Error with empty message, which bypasses all
+    // named error checks in generatePlan's catch block and returns { message: '' }.
+    const originalFetch = globalThis.fetch;
+    globalThis.fetch = vi.fn().mockRejectedValue(
+      new Error(''),
+    ) as typeof fetch;
+
+    try {
+      const user = userEvent.setup();
+      render(<App />);
+      await submitForm(user);
+
+      // Wait for error state to render
+      const alert = await screen.findByRole('alert');
+      expect(alert).toBeInTheDocument();
+
+      // The empty error message from generatePlan triggers App.tsx L104 fallback
+      // 'An unknown error occurred' is then displayed via ErrorDisplay
+      expect(alert).toHaveTextContent(/unknown error occurred/i);
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
 });
