@@ -437,4 +437,341 @@ Disclaimer: Results are based on AI research and should be verified for accuracy
     const rawOutputToggle = screen.getByRole('button', { name: /raw api response/i });
     expect(rawOutputToggle).toBeInTheDocument();
   });
+
+  // ==========================================================================
+  // Mutation Testing — parsePlanStructure Mutant Killers
+  // ==========================================================================
+
+  /**
+   * Targeted Stryker mutation-testing mutant-killing tests.
+   *
+   * Each test is designed to detect and kill a specific class of Stryker mutant
+   * in the parsePlanStructure() function and PlanView rendering logic. Test
+   * descriptions embed the mutator name and source line number for traceability.
+   *
+   * Mutant categories covered:
+   * - ConditionalExpression: regex branch conditions for bullet/numbered/header/disclaimer detection
+   * - EqualityOperator: boundary comparisons (i < 3, activities.length >= 2)
+   * - StringLiteral: regex pattern strings in disclaimerPattern
+   * - ArithmeticOperator: index + 1 in ActivityCard numbering
+   */
+  describe('Mutation testing - parsePlanStructure mutant killers', () => {
+
+    // ========================================================================
+    // Phase 1: Bullet Detection Regex-Branch Mutants
+    // ========================================================================
+
+    it('[ConditionalExpression L119] bullet with dash prefix detected as activity', () => {
+      const dashBulletResult: GeneratePlanResult = {
+        success: true,
+        planText: '- Morning hike at the trail\n- Afternoon swim at the lake\n- Evening barbecue',
+        rawResponse: undefined,
+      };
+
+      render(<PlanView result={dashBulletResult} />);
+
+      // Structured activity list must render for 3 dash-prefixed bullets
+      const activityList = screen.getByRole('list', { name: /list of activities/i });
+      expect(activityList).toBeInTheDocument();
+
+      const items = screen.getAllByRole('listitem');
+      expect(items).toHaveLength(3);
+
+      // Verify individual activity text is present
+      expect(screen.getByText(/Morning hike at the trail/i)).toBeInTheDocument();
+      expect(screen.getByText(/Afternoon swim at the lake/i)).toBeInTheDocument();
+      expect(screen.getByText(/Evening barbecue/i)).toBeInTheDocument();
+    });
+
+    it('[ConditionalExpression L119] bullet with asterisk prefix detected as activity', () => {
+      const asteriskBulletResult: GeneratePlanResult = {
+        success: true,
+        planText: '* Visit the museum\n* Explore the park\n* Enjoy dinner',
+        rawResponse: undefined,
+      };
+
+      render(<PlanView result={asteriskBulletResult} />);
+
+      const activityList = screen.getByRole('list', { name: /list of activities/i });
+      expect(activityList).toBeInTheDocument();
+
+      const items = screen.getAllByRole('listitem');
+      expect(items).toHaveLength(3);
+
+      expect(screen.getByText(/Visit the museum/i)).toBeInTheDocument();
+      expect(screen.getByText(/Explore the park/i)).toBeInTheDocument();
+      expect(screen.getByText(/Enjoy dinner/i)).toBeInTheDocument();
+    });
+
+    it('[ConditionalExpression L119] bullet with unicode bullet character prefix detected', () => {
+      const unicodeBulletResult: GeneratePlanResult = {
+        success: true,
+        planText: '\u2022 First activity\n\u2022 Second activity',
+        rawResponse: undefined,
+      };
+
+      render(<PlanView result={unicodeBulletResult} />);
+
+      const activityList = screen.getByRole('list', { name: /list of activities/i });
+      expect(activityList).toBeInTheDocument();
+
+      const items = screen.getAllByRole('listitem');
+      expect(items).toHaveLength(2);
+
+      expect(screen.getByText(/First activity/i)).toBeInTheDocument();
+      expect(screen.getByText(/Second activity/i)).toBeInTheDocument();
+    });
+
+    // ========================================================================
+    // Phase 2: Numbered-Item Detection Regex-Branch Mutants
+    // ========================================================================
+
+    it('[ConditionalExpression L134] numbered list with period "1. " pattern detected', () => {
+      const numberedPeriodResult: GeneratePlanResult = {
+        success: true,
+        planText: '1. Morning yoga\n2. Beach walk\n3. Sunset viewing',
+        rawResponse: undefined,
+      };
+
+      render(<PlanView result={numberedPeriodResult} />);
+
+      const activityList = screen.getByRole('list', { name: /list of activities/i });
+      expect(activityList).toBeInTheDocument();
+
+      const items = screen.getAllByRole('listitem');
+      expect(items).toHaveLength(3);
+
+      expect(screen.getByText(/Morning yoga/i)).toBeInTheDocument();
+      expect(screen.getByText(/Beach walk/i)).toBeInTheDocument();
+      expect(screen.getByText(/Sunset viewing/i)).toBeInTheDocument();
+    });
+
+    it('[ConditionalExpression L134] numbered list with parenthesis "1) " pattern detected', () => {
+      const numberedParenResult: GeneratePlanResult = {
+        success: true,
+        planText: '1) Visit museum\n2) Explore park\n3) Relax at cafe',
+        rawResponse: undefined,
+      };
+
+      render(<PlanView result={numberedParenResult} />);
+
+      const activityList = screen.getByRole('list', { name: /list of activities/i });
+      expect(activityList).toBeInTheDocument();
+
+      const items = screen.getAllByRole('listitem');
+      expect(items).toHaveLength(3);
+
+      expect(screen.getByText(/Visit museum/i)).toBeInTheDocument();
+      expect(screen.getByText(/Explore park/i)).toBeInTheDocument();
+      expect(screen.getByText(/Relax at cafe/i)).toBeInTheDocument();
+    });
+
+    // ========================================================================
+    // Phase 3: Header Detection Mutants
+    // ========================================================================
+
+    it('[ConditionalExpression L113] header lines at top detected and displayed', () => {
+      const headerResult: GeneratePlanResult = {
+        success: true,
+        planText: 'Area: Downtown\nWeather: Sunny\nAges: 5, 10\n- Activity one\n- Activity two',
+        rawResponse: undefined,
+      };
+
+      render(<PlanView result={headerResult} />);
+
+      // Header metadata should be rendered
+      expect(screen.getByText(/Area: Downtown/)).toBeInTheDocument();
+      expect(screen.getByText(/Weather: Sunny/)).toBeInTheDocument();
+      expect(screen.getByText(/Ages: 5, 10/)).toBeInTheDocument();
+
+      // Activities should still be parsed into structured cards
+      const activityList = screen.getByRole('list', { name: /list of activities/i });
+      expect(activityList).toBeInTheDocument();
+
+      const items = screen.getAllByRole('listitem');
+      expect(items).toHaveLength(2);
+    });
+
+    it('[EqualityOperator L113] header detection limited to first 3 lines (i < 3)', () => {
+      // "Area:" appears at line index 3 (4th line, 0-indexed) — beyond the i < 3 boundary
+      const headerBeyondLimitResult: GeneratePlanResult = {
+        success: true,
+        planText: 'Line one\nLine two\nLine three\nArea: Should not be header\n- Activity 1\n- Activity 2',
+        rawResponse: undefined,
+      };
+
+      render(<PlanView result={headerBeyondLimitResult} />);
+
+      // Activity list should render (2 bullet items)
+      const activityList = screen.getByRole('list', { name: /list of activities/i });
+      expect(activityList).toBeInTheDocument();
+
+      // "Area: Should not be header" at line index 3 is beyond i < 3 — not a header.
+      // It is not a bullet or numbered item either, so it becomes description of the
+      // preceding context. It must NOT appear in the header section.
+      // The early lines (indexes 0,1,2) fall through to the else-if i<5 header fallback,
+      // so "Line one\nLine two\nLine three" become header text.
+      expect(screen.getByText(/Line one/)).toBeInTheDocument();
+
+      // Verify activity items are exactly 2
+      const items = screen.getAllByRole('listitem');
+      expect(items).toHaveLength(2);
+    });
+
+    // ========================================================================
+    // Phase 4: Disclaimer Detection Mutants
+    // ========================================================================
+
+    it('[ConditionalExpression L107] disclaimer text detected and rendered', () => {
+      const disclaimerResult: GeneratePlanResult = {
+        success: true,
+        planText: '- Activity A\n- Activity B\nDisclaimer: This is AI generated',
+        rawResponse: undefined,
+      };
+
+      render(<PlanView result={disclaimerResult} />);
+
+      // Activity list should render
+      const activityList = screen.getByRole('list', { name: /list of activities/i });
+      expect(activityList).toBeInTheDocument();
+
+      // Disclaimer should be detected and displayed in the disclaimer aside
+      const disclaimerNote = screen.getByRole('note', { name: /important disclaimer/i });
+      expect(disclaimerNote).toBeInTheDocument();
+      expect(screen.getByText(/This is AI generated/i)).toBeInTheDocument();
+    });
+
+    it('[StringLiteral L101] "note:" pattern triggers disclaimer detection', () => {
+      const noteDisclaimerResult: GeneratePlanResult = {
+        success: true,
+        planText: '- Activity X\n- Activity Y\nNote: Please verify all information',
+        rawResponse: undefined,
+      };
+
+      render(<PlanView result={noteDisclaimerResult} />);
+
+      // Activity list should render
+      const activityList = screen.getByRole('list', { name: /list of activities/i });
+      expect(activityList).toBeInTheDocument();
+
+      // "Note:" matches disclaimerPattern → rendered as disclaimer
+      const disclaimerNote = screen.getByRole('note', { name: /important disclaimer/i });
+      expect(disclaimerNote).toBeInTheDocument();
+      expect(screen.getByText(/Please verify all information/i)).toBeInTheDocument();
+    });
+
+    // ========================================================================
+    // Phase 5: Rendering Path Mutants
+    // ========================================================================
+
+    it('[EqualityOperator L165] minimum 2 activities required for structured display', () => {
+      // Exactly 2 activities → structured display MUST render
+      const twoActivityResult: GeneratePlanResult = {
+        success: true,
+        planText: '- First outing\n- Second outing',
+        rawResponse: undefined,
+      };
+
+      const { unmount } = render(<PlanView result={twoActivityResult} />);
+
+      const activityList = screen.getByRole('list', { name: /list of activities/i });
+      expect(activityList).toBeInTheDocument();
+
+      const items = screen.getAllByRole('listitem');
+      expect(items).toHaveLength(2);
+
+      unmount();
+
+      // Exactly 1 activity → structured display must NOT render
+      const oneActivityResult: GeneratePlanResult = {
+        success: true,
+        planText: '- Only one activity',
+        rawResponse: undefined,
+      };
+
+      render(<PlanView result={oneActivityResult} />);
+
+      const noActivityList = screen.queryByRole('list', { name: /list of activities/i });
+      expect(noActivityList).not.toBeInTheDocument();
+
+      // Content still renders in unstructured fallback
+      expect(screen.getByText(/Only one activity/i)).toBeInTheDocument();
+    });
+
+    it('[ConditionalExpression L82] null planText renders empty state', () => {
+      const nullPlanResult: GeneratePlanResult = {
+        success: true,
+        planText: null as unknown as string,
+        rawResponse: undefined,
+      };
+
+      render(<PlanView result={nullPlanResult} />);
+
+      // Empty state message should appear
+      expect(screen.getByText(/No plan content available/i)).toBeInTheDocument();
+    });
+
+    it('[ConditionalExpression L88] whitespace-only planText renders empty state', () => {
+      const whitespaceResult: GeneratePlanResult = {
+        success: true,
+        planText: '   \n  \n  ',
+        rawResponse: undefined,
+      };
+
+      render(<PlanView result={whitespaceResult} />);
+
+      // planText.trim().length === 0 in the component guard → empty state
+      expect(screen.getByText(/No plan content available/i)).toBeInTheDocument();
+    });
+
+    // ========================================================================
+    // Phase 6: ActivityCard Content Checks
+    // ========================================================================
+
+    it('[StringLiteral] individual ActivityCard shows activity title correctly', () => {
+      const multiActivityResult: GeneratePlanResult = {
+        success: true,
+        planText: '- Visit the zoo\nGreat for kids and families\n- Explore the aquarium\nAmazing marine life exhibits\n- Enjoy the botanical garden\nBeautiful seasonal flowers',
+        rawResponse: undefined,
+      };
+
+      render(<PlanView result={multiActivityResult} />);
+
+      const activityList = screen.getByRole('list', { name: /list of activities/i });
+      expect(activityList).toBeInTheDocument();
+
+      const items = screen.getAllByRole('listitem');
+      expect(items).toHaveLength(3);
+
+      // Verify each activity title
+      expect(screen.getByText(/Visit the zoo/i)).toBeInTheDocument();
+      expect(screen.getByText(/Explore the aquarium/i)).toBeInTheDocument();
+      expect(screen.getByText(/Enjoy the botanical garden/i)).toBeInTheDocument();
+
+      // Verify descriptions are rendered (continuation lines after bullets)
+      expect(screen.getByText(/Great for kids and families/i)).toBeInTheDocument();
+      expect(screen.getByText(/Amazing marine life exhibits/i)).toBeInTheDocument();
+      expect(screen.getByText(/Beautiful seasonal flowers/i)).toBeInTheDocument();
+    });
+
+    it('[ArithmeticOperator] activity cards have correct numbering badges', () => {
+      const numberedBadgeResult: GeneratePlanResult = {
+        success: true,
+        planText: '- Alpha activity\n- Beta activity\n- Gamma activity\n- Delta activity',
+        rawResponse: undefined,
+      };
+
+      render(<PlanView result={numberedBadgeResult} />);
+
+      const items = screen.getAllByRole('listitem');
+      expect(items).toHaveLength(4);
+
+      // Each ActivityCard renders aria-label "Activity N: <title>" where N = index + 1
+      // Verify numbering via the aria-label attribute on each listitem
+      expect(items[0]).toHaveAttribute('aria-label', expect.stringContaining('Activity 1'));
+      expect(items[1]).toHaveAttribute('aria-label', expect.stringContaining('Activity 2'));
+      expect(items[2]).toHaveAttribute('aria-label', expect.stringContaining('Activity 3'));
+      expect(items[3]).toHaveAttribute('aria-label', expect.stringContaining('Activity 4'));
+    });
+  });
 });
